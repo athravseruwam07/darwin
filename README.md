@@ -1,123 +1,122 @@
 # Darwin
 
-A two-wheel robot learns how two abstract commands move its body, then learns again after a hidden software remapping. **Software verified in simulation. Physical robot performance is unverified.** Native Mac CPU only; no cloud service, CUDA, neural network, or frontend build chain.
+Darwin is a two-wheel robot that learns the relationship between two abstract motor commands and camera-measured body motion. The same learner and controller run in simulation and on the Arduino robot. After a hidden actuator mutation—including swapping wheels or reversing either or both wheel directions—it detects persistent model mismatch, gathers a small active recovery dataset, refits, validates, and navigates again.
 
-The default interactive demo renders an ArUco marker from differential-drive physics and measures motion with the actual OpenCV detector and homography. The ridge learner receives only requested actions and measured poses. It never reads hidden motor channels, mapping matrices, or plant truth. Simulation and hardware use the same runtime, model, controller, transition formation, supervisor, and web UI; camera and actuator adapters differ.
+The learner never receives the hidden map, wheel truth, or simulator state. Everything is local, CPU-only, and cloud-free.
 
-## Run on this Mac
+## Windows setup
 
-```bash
-cd /Users/athravseruwam/Documents/GitHub/darwin_robot
-source venv/bin/activate
-python -m darwin.cli doctor
-python -m darwin.cli demo --mode simulation --config configs/simulation.yaml --ui-port 8770
+Verified on Windows 11 x64 with PowerShell and Python 3.13:
+
+```powershell
+git clone https://github.com/athravseruwam07/darwin.git
+cd darwin
+py -3.13 -m venv venv
+.\venv\Scripts\python.exe -m pip install --upgrade pip
+.\venv\Scripts\python.exe -m pip install -r requirements.resolved.txt
+.\venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\venv\Scripts\python.exe -m darwin.cli doctor
 ```
 
-Open http://127.0.0.1:8770. If occupied, the CLI selects the next free port within 20 ports and prints the actual URL. It never stops the process using another port. The completed task leaves a simulation server running; see `STATUS.md` for its PID/log and URL.
+Do not copy a virtual environment between computers.
 
-A clean installation uses the verified native arm64 Python 3.11.9:
+## Simulation demo
 
-```bash
-cd /Users/athravseruwam/Documents/GitHub/darwin_robot
-/Library/Frameworks/Python.framework/Versions/3.11/bin/python3 -m venv venv
-venv/bin/python -m pip install -r requirements.resolved.txt
-venv/bin/python -m pip install -e '.[dev]'
+```powershell
+.\venv\Scripts\python.exe -m darwin.cli demo --mode simulation --config configs\simulation.yaml --ui-port 8770
 ```
 
-`requirements.resolved.txt` pins tested versions. Install only its one OpenCV distribution. DepthAI 3.10.0 is installed and import/API checked here; it is optional (`pip install -e '.[oak]'`). A physical OAK stream has not been tested. `doctor` opens no devices.
+Open the URL printed by the CLI. If 8770 is occupied, Darwin chooses the next free local port and prints it.
 
-## Operator demo
+Demo flow:
 
-1. **Start Calibration** collects 24 independent full-cycle trials and 12 separate held-out trials. Measured validation errors replace the dashes when fitting completes.
-2. **Select Target**, then click inside the dashed safe arena. **Navigate** executes bounded pulses chosen by the learned forward model. The observed goal must persist for 500 ms.
-3. Use **Recenter simulation** between comparison trials when desired. This is explicitly recorded as a manual intervention, never a navigation success.
-4. **Scramble** stops first, preserves the old model, privately changes the actuator mapping, and inhibits navigation. **Recover** collects fresh data and compares frozen/adapted predictions on the same new held-out pulses.
-5. Navigate again. **Export** creates a local ZIP under `reports/exports`. **Stop** cancels the episode; **Reset Model** discards learned state without moving the robot.
+1. Press **Start Calibration** to collect independent training and held-out camera observations, fit ridge regression, and show real validation error.
+2. Press **Select Target**, click within the dashed safe box, then press **Navigate**.
+3. Pick reverse left, reverse right, reverse both, swap wheels, weaken left, or **Random mashup**.
+4. Press normal **Navigate**. While the robot is moving, press **Inject Mutation** whenever you want. The request is applied at the next safe boundary between motor pulses.
+5. Darwin notices repeated camera-measured prediction mismatch, stops goal-directed motion, actively selects recovery experiments, validates the adapted model against the frozen model, and resumes toward the original target. The live reasoning panel narrates those recorded states and events.
+6. **Full Adaptation Challenge** remains as a one-button convenience flow. **Draw Route** accepts two or more waypoints.
 
-One tab owns an active episode; another tab cannot renew its lease. Refresh/close/background loss of heartbeat stops an active episode after the configured lease. The UI controls real runtime jobs. The canvas shows simulated generated frames honestly; the path and metrics come from recorded detections. This is explicit recalibration after a known change, not automatic damage detection or biological evolution.
+The dashboard shows mismatch score, action-space uncertainty, frozen/adapted motion ghosts, measured held-out errors, obstacle overlays, route, state machine, and immutable event trail. These are runtime values—not scripted animation.
 
-Diagnostics inject actual marker loss, stale frames, disconnect, and boundary faults. Clearing a fault does not start motion. Recenter after the boundary diagnostic. Camera calibration freezes a frame, accepts four corners in TL/TR/BR/BL order plus measured dimensions, saves a homography, and invalidates the old model. Camera geometry in simulation stays fixed when changing the measurement calibration; wrong clicks produce wrong measurements, not a self-fulfilling render.
+## Hardware run on this computer
 
-## Software-only verification
+The local measured config is `configs\hardware.local.yaml`. It names COM5, the OAK camera, marker 7, the saved 1 m × 1 m calibration, 90 PWM ceiling, and a provisional 3 cm probe bound. That file is intentionally excluded from the portable ZIP because another computer may use different ports and calibration.
 
-```bash
-cd /Users/athravseruwam/Documents/GitHub/darwin_robot
-bash scripts/verify_without_hardware.sh
+Start with the robot centered, the full taped square clear, the camera fixed, the USB cable restrained, and someone ready to lift the robot:
+
+```powershell
+.\venv\Scripts\python.exe -m darwin.cli doctor
+.\venv\Scripts\python.exe -m darwin.cli camera-test --backend oak
+.\venv\Scripts\python.exe -m darwin.cli demo --mode hardware --config configs\hardware.local.yaml --ui-port 8770
 ```
 
-The script runs tests, doctor, marker generation, synthetic camera validation, fake firmware/PTY fault scenarios, the full rendered-camera demo, the 60-case benchmark, an actual HTTP server subprocess smoke test, and an Uno compile if the isolated toolchain is installed. It opens no physical camera or serial device and never flashes. Its temporary HTTP server is cleaned up. Logs and exact command/exit/duration records go to `reports/verification/`.
+Open the printed local URL. The runtime starts disarmed. Press **Connect**, confirm tracking is stable, then deliberately press **Start Calibration**.
 
-Individual commands:
+Do not run the adaptation challenge until a normal calibration and short navigation succeed in the current physical setup. A reversal can immediately make the stale controller turn the wrong way; the supervisor limits pulses and stops on tracking, boundary, lease, serial, and duration faults, but a human lift-stop is still mandatory.
 
-```bash
-venv/bin/python -m darwin.cli marker --id 7 --output reports/robot_marker.png
-venv/bin/python -m darwin.cli simulate --seed 42 --output reports/sim_42
-venv/bin/python -m darwin.cli benchmark --seeds 11,22,33,44,55 --output reports/benchmark
-venv/bin/python -m darwin.cli vision-test --synthetic --output reports/vision
-venv/bin/python -m darwin.cli protocol-test --fake
-venv/bin/python -m pytest -q
-bash firmware/compile.sh
+Live mutation is currently disabled in `configs\hardware.local.yaml`. Leave it disabled until the raised-wheel polarity/STOP checks and the OAK disconnect gate are passed. Simulation enables it by default.
+
+## New computer / hackathon setup
+
+Copy `configs\hardware.example.yaml` to `configs\hardware.local.yaml`, then fill the actual serial port and a newly saved calibration. Never reuse this machine's COM name or camera calibration blindly.
+
+```powershell
+Copy-Item configs\hardware.example.yaml configs\hardware.local.yaml
+.\venv\Scripts\python.exe -m darwin.cli doctor
+.\venv\Scripts\python.exe -m darwin.cli motor-test --port COM_ACTUAL
+.\venv\Scripts\python.exe -m darwin.cli calibrate --config configs\hardware.local.yaml --ui-port 8772
 ```
 
-Benchmark: five seeds × four changed maps × three plant variants = 60 recorded cases. Each includes four baseline, four frozen, and four adapted target/headings. Declared thresholds: 0.06 m radius, 500 ms observed dwell, 100 actions/45 synthetic seconds, at least 80% baseline/adapted goal success, and at least 80% reduction in normalized new-map held-out prediction error. Frozen trials use an extra conservative unknown-response travel guard. Failed/aborted trials remain in denominators. Explicit recentering occurs only between trials and before probe episodes. The benchmark uses noisy pose observations for speed; `simulate` and pixel integration tests cover actual vision. Final results and limitations are in `reports/EVIDENCE.md`.
+The first motor test performs a handshake and leaves the controller disarmed. Any moving pulse must be coordinated with the wheels raised:
 
-## Refit, evaluate, export, replay
-
-`reports/sample_run.txt` names the actual complete rendered-camera run used for the evidence. These commands work as written after verification:
-
-```bash
-cd /Users/athravseruwam/Documents/GitHub/darwin_robot
-RUN_PATH="$(cat reports/sample_run.txt)"
-venv/bin/python -m darwin.cli fit --run "$RUN_PATH" --output checkpoints/refit_sample.json
-venv/bin/python -m darwin.cli evaluate --run "$RUN_PATH" --checkpoint checkpoints/refit_sample.json
-venv/bin/python -m darwin.cli export --run "$RUN_PATH" --output reports/export
-venv/bin/python -m darwin.cli replay --run "$RUN_PATH" --ui-port 8771
+```powershell
+.\venv\Scripts\python.exe -m darwin.cli motor-test --port COM_ACTUAL --channel A --pwm 30 --pulse-ms 80 --raised-wheel-confirmed
+.\venv\Scripts\python.exe -m darwin.cli motor-test --port COM_ACTUAL --channel B --pwm 30 --pulse-ms 80 --raised-wheel-confirmed
 ```
 
-Fit uses only the last complete `:train` episode; evaluation uses the separate last `:heldout` episode. Replaying reconstructs timestamped poses, target, path, and measured metrics. **REPLAY · SIMULATION/HARDWARE** labels the original mode. No transport/camera/actuator is instantiated. The timeline uses actual host recording times; fast offline simulation replays faster than synthetic physics time. Video was not recorded by default, so replay draws recorded poses and says so explicitly. Seek/play/pause/export work; live movement commands are unavailable.
+Confirm both wheel polarities, STOP, host-loss watchdog, reconnect-disarmed behavior, power stability, marker tracking, footprint, camera age/jitter, and stopping clearance before setting `hardware_confirmed: true`.
 
-Checkpoints are non-executable JSON containing feature/measurement versions, feature order, coefficients, normalization, regularization, public config/calibration IDs, fit metrics, and exact training action IDs. Incompatible loads and held-out/train overlap fail. No pickle is used.
+## Verification
 
-## Measurement, model and safety details
-
-Coordinates are meters, seconds, radians; x right, y up, heading counterclockwise. Live camera/control timestamps use host monotonic seconds. Synthetic physics uses a separately declared advancing monotonic clock. UTC names are for readability only.
-
-The response model uses **full-cycle pulse-plus-settle displacement**, not pulse-only velocity: default 120 ms output followed by 300 ms stopped settling. Body displacement uses midpoint heading; velocity targets divide by the measured full-cycle duration. Planning multiplies model outputs by that same cycle length. Hardware waits for measured stationary observations before a new pulse; configured noise thresholds must be checked on the real marker. Excess duration error, uncertainty, nonfinite data, tracking loss, stale frame identity, calibration changes, intervention, or cancellation rejects the transition.
-
-Features are `[u1,u2,1]`. Ridge uses `solve`, requires rank-three independent actions, reports conditioning and separate forward/yaw errors. Zero requested action predicts zero propulsion. Navigation also requires a useful response above the stationary baseline and held-out error below 70% of a zero-motion predictor in both outputs; a motionless/stalled robot cannot unlock navigation merely by having tiny training residuals. Baseline response minimums (.002 m/s and .02 rad/s), validation ceilings (.04 m/s and .4 rad/s), and geometry defaults are software starting gates, not physically validated tuning.
-
-Controller scores a grid of abstract actions using only learned predictions, desired target motion, and swept arc/footprint boundaries. The simulator has wheel asymmetry, optional deadband/lag/process and sensor noise, independent seeds, command latency, delayed observations, frame loss, and a fake clock. The easy arena has no obstacles. The renderer alone sees plant truth. Physical outputs live exclusively in the actuator audit log.
-
-Supervisor checks pose validity, bounded frame age, transport health, operator lease, action/time limits, calibration and footprint before pulses and continuously during hardware operation. STOP invalidates old generations before transport waits. Normal scheduled STOP is distinct from watchdog/ACK/reset faults. Reconnect stays disarmed, invalidates old models, and requires fresh observations. Firmware watchdog is independent of Python and browser life.
-
-Run directories are unique and append-only. Essential-record queue overflow/disk errors fail closed; stop/fault flushes. Config/calibration/source SHA256/dependency metadata, requested actions, observations, full-cycle transitions, events, frames/timestamps, checkpoints and evaluations are recorded. The training loader has an explicit field whitelist. Export preserves raw logs, and privileged `actuator_audit.jsonl` remains separate. No source-control commit is claimed because this new project has not been initialized as a Git repository.
-
-## Hardware handover — after team readiness
-
-Do not copy synthetic learned coefficients into hardware or use the template geometry as measured values. No board was opened, flashed, or moved during this software task. Confirm controller/driver/wiring/power first, then coordinate the raised-wheel checks.
-
-Firmware uses AIN1 D4, AIN2 D7, PWMA D5, BIN1 D8, BIN2 D9, PWMB D6, STBY D10. Review `firmware/REVIEW.md`; hardened source preserves the reference pin map/protocol. It was compiled for `arduino:avr:uno`. A RedBoard must actually be compatible before choosing that target. Toolchain and board packages are isolated in `firmware/toolchain/`.
-
-1. Coordinate firmware upload with motor power disconnected. No upload command is automatically run.
-2. Identify the actual serial port and verify handshake disarmed. The old pressure device is not assumed to be Darwin.
-3. Authorize short independent A/B pulses with wheels raised, then verify STOP, host-loss timeout, reconnect disarmed, polarity, power stability and mechanical clearance.
-4. Mount camera and marker. Read-only camera tests do not authorize motor movement. Calibrate reference points at the marker height. Moving/replacing the camera requires explicit recalibration; automatic physical movement detection is not claimed.
-5. Measure camera age bound, pose noise, footprint, arena, maximum probe displacement, settling/coast, dead zone and timing. Fill a new `configs/hardware.local.yaml` from the example, including `measured_probe_bound_m` and `timestamp_bound_ms`, then set `hardware_confirmed: true` only after coordinated readiness checks.
-6. Start hardware demo disarmed, explicitly Connect disarmed, inspect tracking, then deliberately Start Calibration. Observe one slow target before scramble/recovery. Record real held-out results and a backup video.
-
-Exact adapter commands (replace uppercase placeholders with identified device/files):
-
-```bash
-venv/bin/python -m darwin.cli camera-test --backend oak
-venv/bin/python -m darwin.cli camera-test --backend video --path ACTUAL_VIDEO
-venv/bin/python -m darwin.cli camera-test --backend webcam --index 0
-venv/bin/python -m darwin.cli calibrate --config configs/hardware.local.yaml --ui-port 8772
-venv/bin/python -m darwin.cli motor-test --port /dev/cu.ACTUAL_CONTROLLER
-# Only after explicit coordinated raised-wheel readiness:
-venv/bin/python -m darwin.cli motor-test --port /dev/cu.ACTUAL_CONTROLLER --channel A --pwm 30 --pulse-ms 80 --raised-wheel-confirmed
-venv/bin/python -m darwin.cli demo --mode hardware --config configs/hardware.local.yaml --ui-port 8770
+```powershell
+.\venv\Scripts\python.exe -m pytest -q
+node --check src\darwin\web\static\app.js
+.\venv\Scripts\python.exe -m darwin.cli vision-test --synthetic --output reports\vision
+.\venv\Scripts\python.exe -m darwin.cli protocol-test --fake
+.\venv\Scripts\python.exe -m darwin.cli simulate --seed 42 --output reports\sim_42
+.\venv\Scripts\python.exe -m darwin.cli benchmark --observation pose --seeds 11,22,33 --variants linear,noisy,nonlinear --output reports\benchmark
 ```
 
-`calibrate` starts the camera read-only and serves calibration UI without serial. Hardware UI Connect remains disarmed. Missing calibration/readiness/timing/probe bounds inhibit outputs. Receive-only cameras need a measured conservative capture-age bound; that bound is included in freshness checks. Recorded video can test detection but cannot authorize physical motion.
+The benchmark covers swap, reverse-left, reverse-right, reverse-both, and unequal-gain mutations across every requested seed and plant variant. Failures remain in the denominator. Synthetic vision uses generated pixels and the real ArUco detector; the benchmark uses pose observations for speed.
 
-The project is isolated from `private_whisper_bud`: no files, environments, recordings or services there were modified; ports 8765/8766 were not used. Nothing was pushed, published or deployed externally.
+The full Windows verifier is:
+
+```powershell
+.\venv\Scripts\python.exe scripts\verify_without_hardware.py
+```
+
+## Architecture and safety
+
+- Camera: OAK, webcam, video, or simulation-generated frames feed the same marker tracker.
+- Model: small ridge regression over `[left command, right command, bias]`; separate held-out evaluation and JSON checkpoints.
+- Change detection: normalized residual threshold with consecutive-evidence gating, so one noisy pulse does not trigger recovery.
+- Live mutations: operator-owned requests are queued and applied only between pulses. STOP or a new episode clears the queue. Random mashups compose two or more seeded, reviewed maps and reject identity-like, nonfinite, rank-deficient, or amplifying results.
+- Recovery: leverage-based experiment selection, bounded pulse count, frozen-versus-adapted validation, and per-run response signatures. Signatures are informational; they do not silently load an old model.
+- Controller: learned-model candidate search with footprint/boundary checks; single-wheel pivots are excluded from normal motion.
+- Obstacles: camera-derived circles/polygons are excluded from candidate swept paths. Keep detection disabled until the physical view is checked for false positives.
+- Safety: local-only server, ownership lease, continuous pose/transport checks, hard action/time limits, cancellation, firmware watchdog, fail-closed logging, and disarmed reconnect.
+- Evidence: append-only JSONL records observations, commands, transitions, events, checkpoints, evaluations, exports, and privileged actuator audit separately.
+
+The hidden map lives only inside the simulator plant or hardware actuator. The learner and controller receive requested actions and observed motion only. Automatic recovery is designed for controlled software remaps; it is not a blanket claim that arbitrary mechanical damage can be diagnosed.
+
+## Replay and export
+
+```powershell
+.\venv\Scripts\python.exe -m darwin.cli export --run data\runs\RUN_ID --output reports\exports
+.\venv\Scripts\python.exe -m darwin.cli replay --run data\runs\RUN_ID --ui-port 8771
+```
+
+Replay is read-only and does not open a camera, serial port, or actuator. Source bundles exclude virtual environments, caches, credentials, local device paths, and generated run data.
+
+Firmware pinout and protocol review are in `firmware\REVIEW.md`. Nothing auto-flashes the board.

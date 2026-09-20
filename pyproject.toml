@@ -6,7 +6,7 @@ name = "darwin-robot"
 version = "0.1.0"
 description = "Local camera-observed motor system identification demo"
 requires-python = ">=3.11"
-dependencies = ["numpy", "PyYAML", "pyserial", "opencv-contrib-python", "fastapi", "uvicorn"]
+dependencies = ["numpy", "PyYAML", "pyserial", "opencv-contrib-python", "fastapi", "uvicorn", "websockets"]
 [project.optional-dependencies]
 dev = ["pytest", "httpx"]
 oak = ["depthai>=3,<4"]

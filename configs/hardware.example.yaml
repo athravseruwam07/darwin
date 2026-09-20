@@ -17,3 +17,11 @@ robot_radius_m: 0.08
 arena_width_m: 1.0
 arena_height_m: 1.0
 boundary_margin_m: 0.15
+# Automatic residual-change detection requires three consecutive mismatches.
+mismatch_threshold: 0.25
+mismatch_required_exceedances: 3
+recovery_trials: 12
+recovery_validation_trials: 8
+# Enable only after checking the camera view for false obstacle blobs.
+obstacle_detection_enabled: false
+live_mutation_enabled: false

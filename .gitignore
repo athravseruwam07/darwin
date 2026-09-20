@@ -6,6 +6,11 @@ __pycache__/
 data/runs/
 checkpoints/
 reports/export/
+reports/exports/
+reports/*_stdout.log
+reports/*_stderr.log
+configs/*.local.yaml
+data/calibration-*.json
 .DS_Store
 firmware/toolchain/
 firmware/build/
