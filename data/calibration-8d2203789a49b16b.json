@@ -1,0 +1,32 @@
+{
+  "points_px": [
+    [
+      3.4246612837005292,
+      3.7837689886410293
+    ],
+    [
+      636.5753387162995,
+      3.7837689886410293
+    ],
+    [
+      636.5753387162995,
+      476.334473792254
+    ],
+    [
+      3.4246612837005292,
+      476.334473792254
+    ]
+  ],
+  "width_m": 1.0,
+  "height_m": 1.0,
+  "image_size": [
+    640,
+    480
+  ],
+  "camera_id": "simulation",
+  "heading_offset_rad": 0.0,
+  "marker_height_m": 0.0,
+  "calibration_id": "8d2203789a49b16b",
+  "point_order": "TL TR BR BL",
+  "reference_plane": "marker height; no parallax correction"
+}

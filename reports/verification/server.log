@@ -1,0 +1,1 @@
+{"passed": true, "port": 54489, "checks": ["real server", "HTML", "status", "JPEG", "async learn", "STOP", "no post-stop samples"]}

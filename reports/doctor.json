@@ -1,0 +1,12 @@
+{
+  "python": "3.11.9 (v3.11.9:de54cf5be3, Apr  2 2024, 07:12:50) [Clang 13.0.0 (clang-1300.0.29.30)]",
+  "executable": "/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python",
+  "architecture": "arm64",
+  "platform": "macOS-15.6.1-arm64-arm-64bit",
+  "numpy": "2.4.6",
+  "opencv": "5.0.0",
+  "aruco": true,
+  "default_mode": "simulation",
+  "optional_depthai": "3.10.0",
+  "device_access": "none; no serial or camera opened"
+}

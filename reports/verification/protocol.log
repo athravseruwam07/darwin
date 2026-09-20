@@ -1,0 +1,21 @@
+{
+  "mode": "fake firmware + actual pyserial POSIX PTY",
+  "scenarios": {
+    "startup_disarmed": true,
+    "crlf_partial": true,
+    "ack": true,
+    "duplicate_sequence": true,
+    "watchdog": true,
+    "overflow_discards_remainder": true,
+    "strict_numeric_and_trailing": true,
+    "pty_handshake_disarmed": true,
+    "pty_pulse_stop": true,
+    "invalid_ack": true,
+    "missing_ack": true,
+    "reset": true,
+    "disconnect": true
+  },
+  "passed": true,
+  "scenario_count": 13,
+  "hardware_verified": false
+}

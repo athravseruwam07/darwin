@@ -1,0 +1,17 @@
+{
+  "mode": "synthetic camera; actual OpenCV ArUco detection",
+  "opencv": "5.0.0",
+  "frames": 150,
+  "detected": 150,
+  "failures": [],
+  "position_rmse_m": 0.0009457992054820385,
+  "position_max_m": 0.0011837684438260993,
+  "heading_rmse_rad": 0.003169721074405185,
+  "heading_max_rad": 0.007286837508334809,
+  "occlusion_invalid": true,
+  "thresholds": {
+    "position_max_m": 0.004,
+    "heading_max_rad": 0.04
+  },
+  "passed": true
+}

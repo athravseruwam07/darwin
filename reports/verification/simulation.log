@@ -1,0 +1,34 @@
+{
+  "mode": "SIMULATION",
+  "cases": 1,
+  "seeds": [
+    42
+  ],
+  "variants": [
+    "linear"
+  ],
+  "mappings": [
+    "reverse_one"
+  ],
+  "failures": [],
+  "navigation": {
+    "before_navigation": {
+      "successes": 4,
+      "trials": 4,
+      "success_fraction": 1.0
+    },
+    "frozen_navigation": {
+      "successes": 0,
+      "trials": 4,
+      "success_fraction": 0.0
+    },
+    "adapted_navigation": {
+      "successes": 4,
+      "trials": 4,
+      "success_fraction": 1.0
+    }
+  },
+  "prediction_reduction_min": 0.9954421372904225,
+  "prediction_reduction_mean": 0.9954421372904225,
+  "passed": true
+}

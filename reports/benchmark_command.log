@@ -1,0 +1,103 @@
+{"completed": 1, "seed": 11, "variant": "linear", "mapping": "swap", "error": null}
+{"completed": 2, "seed": 11, "variant": "linear", "mapping": "reverse_one", "error": null}
+{"completed": 3, "seed": 11, "variant": "linear", "mapping": "reverse_both", "error": null}
+{"completed": 4, "seed": 11, "variant": "linear", "mapping": "unequal_gains", "error": null}
+{"completed": 5, "seed": 22, "variant": "linear", "mapping": "swap", "error": null}
+{"completed": 6, "seed": 22, "variant": "linear", "mapping": "reverse_one", "error": null}
+{"completed": 7, "seed": 22, "variant": "linear", "mapping": "reverse_both", "error": null}
+{"completed": 8, "seed": 22, "variant": "linear", "mapping": "unequal_gains", "error": null}
+{"completed": 9, "seed": 33, "variant": "linear", "mapping": "swap", "error": null}
+{"completed": 10, "seed": 33, "variant": "linear", "mapping": "reverse_one", "error": null}
+{"completed": 11, "seed": 33, "variant": "linear", "mapping": "reverse_both", "error": null}
+{"completed": 12, "seed": 33, "variant": "linear", "mapping": "unequal_gains", "error": null}
+{"completed": 13, "seed": 44, "variant": "linear", "mapping": "swap", "error": null}
+{"completed": 14, "seed": 44, "variant": "linear", "mapping": "reverse_one", "error": null}
+{"completed": 15, "seed": 44, "variant": "linear", "mapping": "reverse_both", "error": null}
+{"completed": 16, "seed": 44, "variant": "linear", "mapping": "unequal_gains", "error": null}
+{"completed": 17, "seed": 55, "variant": "linear", "mapping": "swap", "error": null}
+{"completed": 18, "seed": 55, "variant": "linear", "mapping": "reverse_one", "error": null}
+{"completed": 19, "seed": 55, "variant": "linear", "mapping": "reverse_both", "error": null}
+{"completed": 20, "seed": 55, "variant": "linear", "mapping": "unequal_gains", "error": null}
+{"completed": 21, "seed": 11, "variant": "noisy", "mapping": "swap", "error": null}
+{"completed": 22, "seed": 11, "variant": "noisy", "mapping": "reverse_one", "error": null}
+{"completed": 23, "seed": 11, "variant": "noisy", "mapping": "reverse_both", "error": null}
+{"completed": 24, "seed": 11, "variant": "noisy", "mapping": "unequal_gains", "error": null}
+{"completed": 25, "seed": 22, "variant": "noisy", "mapping": "swap", "error": null}
+{"completed": 26, "seed": 22, "variant": "noisy", "mapping": "reverse_one", "error": null}
+{"completed": 27, "seed": 22, "variant": "noisy", "mapping": "reverse_both", "error": null}
+{"completed": 28, "seed": 22, "variant": "noisy", "mapping": "unequal_gains", "error": null}
+{"completed": 29, "seed": 33, "variant": "noisy", "mapping": "swap", "error": null}
+{"completed": 30, "seed": 33, "variant": "noisy", "mapping": "reverse_one", "error": null}
+{"completed": 31, "seed": 33, "variant": "noisy", "mapping": "reverse_both", "error": null}
+{"completed": 32, "seed": 33, "variant": "noisy", "mapping": "unequal_gains", "error": null}
+{"completed": 33, "seed": 44, "variant": "noisy", "mapping": "swap", "error": null}
+{"completed": 34, "seed": 44, "variant": "noisy", "mapping": "reverse_one", "error": null}
+{"completed": 35, "seed": 44, "variant": "noisy", "mapping": "reverse_both", "error": null}
+{"completed": 36, "seed": 44, "variant": "noisy", "mapping": "unequal_gains", "error": null}
+{"completed": 37, "seed": 55, "variant": "noisy", "mapping": "swap", "error": null}
+{"completed": 38, "seed": 55, "variant": "noisy", "mapping": "reverse_one", "error": null}
+{"completed": 39, "seed": 55, "variant": "noisy", "mapping": "reverse_both", "error": null}
+{"completed": 40, "seed": 55, "variant": "noisy", "mapping": "unequal_gains", "error": null}
+{"completed": 41, "seed": 11, "variant": "nonlinear", "mapping": "swap", "error": null}
+{"completed": 42, "seed": 11, "variant": "nonlinear", "mapping": "reverse_one", "error": null}
+{"completed": 43, "seed": 11, "variant": "nonlinear", "mapping": "reverse_both", "error": null}
+{"completed": 44, "seed": 11, "variant": "nonlinear", "mapping": "unequal_gains", "error": null}
+{"completed": 45, "seed": 22, "variant": "nonlinear", "mapping": "swap", "error": null}
+{"completed": 46, "seed": 22, "variant": "nonlinear", "mapping": "reverse_one", "error": null}
+{"completed": 47, "seed": 22, "variant": "nonlinear", "mapping": "reverse_both", "error": null}
+{"completed": 48, "seed": 22, "variant": "nonlinear", "mapping": "unequal_gains", "error": null}
+{"completed": 49, "seed": 33, "variant": "nonlinear", "mapping": "swap", "error": null}
+{"completed": 50, "seed": 33, "variant": "nonlinear", "mapping": "reverse_one", "error": null}
+{"completed": 51, "seed": 33, "variant": "nonlinear", "mapping": "reverse_both", "error": null}
+{"completed": 52, "seed": 33, "variant": "nonlinear", "mapping": "unequal_gains", "error": null}
+{"completed": 53, "seed": 44, "variant": "nonlinear", "mapping": "swap", "error": null}
+{"completed": 54, "seed": 44, "variant": "nonlinear", "mapping": "reverse_one", "error": null}
+{"completed": 55, "seed": 44, "variant": "nonlinear", "mapping": "reverse_both", "error": null}
+{"completed": 56, "seed": 44, "variant": "nonlinear", "mapping": "unequal_gains", "error": null}
+{"completed": 57, "seed": 55, "variant": "nonlinear", "mapping": "swap", "error": null}
+{"completed": 58, "seed": 55, "variant": "nonlinear", "mapping": "reverse_one", "error": null}
+{"completed": 59, "seed": 55, "variant": "nonlinear", "mapping": "reverse_both", "error": null}
+{"completed": 60, "seed": 55, "variant": "nonlinear", "mapping": "unequal_gains", "error": null}
+{
+  "mode": "SIMULATION",
+  "cases": 60,
+  "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55
+  ],
+  "variants": [
+    "linear",
+    "noisy",
+    "nonlinear"
+  ],
+  "mappings": [
+    "reverse_both",
+    "reverse_one",
+    "swap",
+    "unequal_gains"
+  ],
+  "failures": [],
+  "navigation": {
+    "before_navigation": {
+      "successes": 240,
+      "trials": 240,
+      "success_fraction": 1.0
+    },
+    "frozen_navigation": {
+      "successes": 0,
+      "trials": 240,
+      "success_fraction": 0.0
+    },
+    "adapted_navigation": {
+      "successes": 240,
+      "trials": 240,
+      "success_fraction": 1.0
+    }
+  },
+  "prediction_reduction_min": 0.9405799996234177,
+  "prediction_reduction_mean": 0.9816199648256141,
+  "passed": true
+}

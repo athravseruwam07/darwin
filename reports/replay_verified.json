@@ -1,0 +1,584 @@
+{
+  "mode": "replay",
+  "state": "REPLAY",
+  "run_id": "20260919T213530.230366Z_b16f0c5496",
+  "original_mode": "simulation",
+  "pose": {
+    "frame_id": 1569,
+    "observed_at": 165.45399999999455,
+    "x_m": 0.36502269810540766,
+    "y_m": 0.38382024107994744,
+    "theta_rad": -2.139750506967336,
+    "valid": true,
+    "quality": 1.0,
+    "calibration_id": "2faf633dcb4d2b7f",
+    "invalid_reason": null
+  },
+  "target": [
+    0.35,
+    0.35
+  ],
+  "trail": [
+    {
+      "x_m": 0.4943076597879378,
+      "y_m": 0.5021058642042951
+    },
+    {
+      "x_m": 0.4890837930550972,
+      "y_m": 0.5018412723421801
+    },
+    {
+      "x_m": 0.4755881821418966,
+      "y_m": 0.49732428054968836
+    },
+    {
+      "x_m": 0.46314757082943636,
+      "y_m": 0.4901137620770607
+    },
+    {
+      "x_m": 0.44499761733650606,
+      "y_m": 0.4757221198032195
+    },
+    {
+      "x_m": 0.42791717600934387,
+      "y_m": 0.4600059732265909
+    },
+    {
+      "x_m": 0.412142381981505,
+      "y_m": 0.442992853471282
+    },
+    {
+      "x_m": 0.3929087201567697,
+      "y_m": 0.42100494639609687
+    },
+    {
+      "x_m": 0.3783548680456219,
+      "y_m": 0.4029372420340837
+    },
+    {
+      "x_m": 0.36502269810540766,
+      "y_m": 0.38382024107994744
+    }
+  ],
+  "predicted_motion": [],
+  "valid_sample_count": 24,
+  "rejected_sample_count": 0,
+  "model_id": "0129121c62625583",
+  "validation_metrics": {
+    "current": {
+      "v_rmse_mps": 0.0002845882184391051,
+      "omega_rmse_radps": 0.0027037017568486955,
+      "v_mae_mps": 0.00026456236277262274,
+      "omega_mae_radps": 0.0022067284614124727,
+      "normalized_rmse": 0.003713026548937671,
+      "normalization_scales": [
+        0.08,
+        0.7
+      ],
+      "count": 12,
+      "zero_baseline_v_rmse_mps": 0.0378366654157585,
+      "zero_baseline_omega_rmse_radps": 0.48822060975099024
+    },
+    "fit": {
+      "training_count": 24,
+      "feature_rank": 3,
+      "condition_number": 1.5165581630215235,
+      "action_min": [
+        -1.0,
+        -1.0
+      ],
+      "action_max": [
+        1.0,
+        1.0
+      ],
+      "training": {
+        "v_rmse_mps": 0.0002597343041320572,
+        "omega_rmse_radps": 0.0016549879250838382,
+        "v_mae_mps": 0.00024757121456982174,
+        "omega_mae_radps": 0.0013720102428687762,
+        "normalized_rmse": 0.0028399549831705415,
+        "normalization_scales": [
+          0.08,
+          0.7
+        ],
+        "count": 24
+      }
+    },
+    "before": {
+      "v_rmse_mps": 0.000318021383235859,
+      "omega_rmse_radps": 0.002209916318261734,
+      "v_mae_mps": 0.0002895831186500879,
+      "omega_mae_radps": 0.001566299107680828,
+      "normalized_rmse": 0.00358953661506412,
+      "normalization_scales": [
+        0.08,
+        0.7
+      ],
+      "count": 12,
+      "zero_baseline_v_rmse_mps": 0.037878890454302955,
+      "zero_baseline_omega_rmse_radps": 0.3660709613099983
+    },
+    "frozen": {
+      "v_rmse_mps": 0.04778419428441341,
+      "omega_rmse_radps": 0.689602361655915,
+      "v_mae_mps": 0.03795997399856316,
+      "omega_mae_radps": 0.5468338626974488,
+      "normalized_rmse": 0.814642034112935,
+      "normalization_scales": [
+        0.08,
+        0.7
+      ],
+      "count": 12
+    },
+    "adapted": {
+      "v_rmse_mps": 0.0002845882184391051,
+      "omega_rmse_radps": 0.0027037017568486955,
+      "v_mae_mps": 0.00026456236277262274,
+      "omega_mae_radps": 0.0022067284614124727,
+      "normalized_rmse": 0.003713026548937671,
+      "normalization_scales": [
+        0.08,
+        0.7
+      ],
+      "count": 12,
+      "zero_baseline_v_rmse_mps": 0.0378366654157585,
+      "zero_baseline_omega_rmse_radps": 0.48822060975099024
+    }
+  },
+  "transport_health": {
+    "connected": false,
+    "detail": "Read-only replay; no transport"
+  },
+  "busy": false,
+  "replay": {
+    "playing": false,
+    "position_s": 5.148986665997654,
+    "duration_s": 5.148986665997654,
+    "record_count": 2098
+  },
+  "calibration": {
+    "points_px": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        639.0,
+        0.0
+      ],
+      [
+        639.0,
+        479.0
+      ],
+      [
+        0.0,
+        479.0
+      ]
+    ],
+    "width_m": 1.0,
+    "height_m": 1.0,
+    "image_size": [
+      640,
+      480
+    ],
+    "camera_id": "simulation",
+    "heading_offset_rad": 0.0,
+    "marker_height_m": 0.0,
+    "calibration_id": "2faf633dcb4d2b7f",
+    "point_order": "TL TR BR BL",
+    "reference_plane": "marker height; no parallax correction"
+  },
+  "events": [
+    {
+      "kind": "stop",
+      "at": 133.20900000002385,
+      "wall_monotonic": 65576.790187625,
+      "reason": "explicit simulated manual recenter",
+      "fault": false
+    },
+    {
+      "kind": "intervention",
+      "at": 133.21000000002385,
+      "wall_monotonic": 65576.795858041,
+      "type": "manual_recenter",
+      "pose": {
+        "frame_id": 1264,
+        "observed_at": 133.21000000002385,
+        "x_m": 0.4993717032419125,
+        "y_m": 0.5006574658610875,
+        "theta_rad": -0.0001886659644544936,
+        "valid": true,
+        "quality": 1.0,
+        "calibration_id": "2faf633dcb4d2b7f",
+        "invalid_reason": null
+      }
+    },
+    {
+      "kind": "episode_started",
+      "at": 133.21000000002385,
+      "wall_monotonic": 65576.799281708,
+      "operation": "recover",
+      "owner_id": "cli"
+    },
+    {
+      "kind": "evaluation",
+      "at": 148.3300000000101,
+      "wall_monotonic": 65577.132532958,
+      "metrics": {
+        "current": {
+          "v_rmse_mps": 0.0002845882184391051,
+          "omega_rmse_radps": 0.0027037017568486955,
+          "v_mae_mps": 0.00026456236277262274,
+          "omega_mae_radps": 0.0022067284614124727,
+          "normalized_rmse": 0.003713026548937671,
+          "normalization_scales": [
+            0.08,
+            0.7
+          ],
+          "count": 12,
+          "zero_baseline_v_rmse_mps": 0.0378366654157585,
+          "zero_baseline_omega_rmse_radps": 0.48822060975099024
+        },
+        "fit": {
+          "training_count": 24,
+          "feature_rank": 3,
+          "condition_number": 1.5165581630215235,
+          "action_min": [
+            -1.0,
+            -1.0
+          ],
+          "action_max": [
+            1.0,
+            1.0
+          ],
+          "training": {
+            "v_rmse_mps": 0.0002597343041320572,
+            "omega_rmse_radps": 0.0016549879250838382,
+            "v_mae_mps": 0.00024757121456982174,
+            "omega_mae_radps": 0.0013720102428687762,
+            "normalized_rmse": 0.0028399549831705415,
+            "normalization_scales": [
+              0.08,
+              0.7
+            ],
+            "count": 24
+          }
+        },
+        "before": {
+          "v_rmse_mps": 0.000318021383235859,
+          "omega_rmse_radps": 0.002209916318261734,
+          "v_mae_mps": 0.0002895831186500879,
+          "omega_mae_radps": 0.001566299107680828,
+          "normalized_rmse": 0.00358953661506412,
+          "normalization_scales": [
+            0.08,
+            0.7
+          ],
+          "count": 12,
+          "zero_baseline_v_rmse_mps": 0.037878890454302955,
+          "zero_baseline_omega_rmse_radps": 0.3660709613099983
+        },
+        "frozen": {
+          "v_rmse_mps": 0.04778419428441341,
+          "omega_rmse_radps": 0.689602361655915,
+          "v_mae_mps": 0.03795997399856316,
+          "omega_mae_radps": 0.5468338626974488,
+          "normalized_rmse": 0.814642034112935,
+          "normalization_scales": [
+            0.08,
+            0.7
+          ],
+          "count": 12
+        },
+        "adapted": {
+          "v_rmse_mps": 0.0002845882184391051,
+          "omega_rmse_radps": 0.0027037017568486955,
+          "v_mae_mps": 0.00026456236277262274,
+          "omega_mae_radps": 0.0022067284614124727,
+          "normalized_rmse": 0.003713026548937671,
+          "normalization_scales": [
+            0.08,
+            0.7
+          ],
+          "count": 12,
+          "zero_baseline_v_rmse_mps": 0.0378366654157585,
+          "zero_baseline_omega_rmse_radps": 0.48822060975099024
+        }
+      },
+      "training_action_ids": [
+        "9d3a909d294646ce8394638aa958b442:train-0000",
+        "9d3a909d294646ce8394638aa958b442:train-0001",
+        "9d3a909d294646ce8394638aa958b442:train-0002",
+        "9d3a909d294646ce8394638aa958b442:train-0003",
+        "9d3a909d294646ce8394638aa958b442:train-0004",
+        "9d3a909d294646ce8394638aa958b442:train-0005",
+        "9d3a909d294646ce8394638aa958b442:train-0006",
+        "9d3a909d294646ce8394638aa958b442:train-0007",
+        "9d3a909d294646ce8394638aa958b442:train-0008",
+        "9d3a909d294646ce8394638aa958b442:train-0009",
+        "9d3a909d294646ce8394638aa958b442:train-0010",
+        "9d3a909d294646ce8394638aa958b442:train-0011",
+        "9d3a909d294646ce8394638aa958b442:train-0012",
+        "9d3a909d294646ce8394638aa958b442:train-0013",
+        "9d3a909d294646ce8394638aa958b442:train-0014",
+        "9d3a909d294646ce8394638aa958b442:train-0015",
+        "9d3a909d294646ce8394638aa958b442:train-0016",
+        "9d3a909d294646ce8394638aa958b442:train-0017",
+        "9d3a909d294646ce8394638aa958b442:train-0018",
+        "9d3a909d294646ce8394638aa958b442:train-0019",
+        "9d3a909d294646ce8394638aa958b442:train-0020",
+        "9d3a909d294646ce8394638aa958b442:train-0021",
+        "9d3a909d294646ce8394638aa958b442:train-0022",
+        "9d3a909d294646ce8394638aa958b442:train-0023"
+      ],
+      "heldout_action_ids": [
+        "9d3a909d294646ce8394638aa958b442:heldout-0000",
+        "9d3a909d294646ce8394638aa958b442:heldout-0001",
+        "9d3a909d294646ce8394638aa958b442:heldout-0002",
+        "9d3a909d294646ce8394638aa958b442:heldout-0003",
+        "9d3a909d294646ce8394638aa958b442:heldout-0004",
+        "9d3a909d294646ce8394638aa958b442:heldout-0005",
+        "9d3a909d294646ce8394638aa958b442:heldout-0006",
+        "9d3a909d294646ce8394638aa958b442:heldout-0007",
+        "9d3a909d294646ce8394638aa958b442:heldout-0008",
+        "9d3a909d294646ce8394638aa958b442:heldout-0009",
+        "9d3a909d294646ce8394638aa958b442:heldout-0010",
+        "9d3a909d294646ce8394638aa958b442:heldout-0011"
+      ]
+    },
+    {
+      "kind": "stop",
+      "at": 148.3300000000101,
+      "wall_monotonic": 65577.140452125,
+      "reason": "explicit simulated manual recenter",
+      "fault": false
+    },
+    {
+      "kind": "intervention",
+      "at": 148.3310000000101,
+      "wall_monotonic": 65577.146905166,
+      "type": "manual_recenter",
+      "pose": {
+        "frame_id": 1374,
+        "observed_at": 148.3310000000101,
+        "x_m": 0.4993717032419125,
+        "y_m": 0.5006574658610875,
+        "theta_rad": -0.0001886659644544936,
+        "valid": true,
+        "quality": 1.0,
+        "calibration_id": "2faf633dcb4d2b7f",
+        "invalid_reason": null
+      }
+    },
+    {
+      "kind": "target",
+      "at": 148.3310000000101,
+      "wall_monotonic": 65577.14692225,
+      "target": [
+        0.67,
+        0.65
+      ]
+    },
+    {
+      "kind": "episode_started",
+      "at": 148.3310000000101,
+      "wall_monotonic": 65577.150415958,
+      "operation": "navigate",
+      "owner_id": "cli"
+    },
+    {
+      "kind": "navigation_result",
+      "at": 152.61100000000621,
+      "wall_monotonic": 65577.302946166,
+      "success": true,
+      "final_distance_m": 0.03875342799226043,
+      "actions": 9,
+      "elapsed_s": 4.279999999996107,
+      "target": [
+        0.67,
+        0.65
+      ]
+    },
+    {
+      "kind": "stop",
+      "at": 152.61100000000621,
+      "wall_monotonic": 65577.30989375,
+      "reason": "explicit simulated manual recenter",
+      "fault": false
+    },
+    {
+      "kind": "intervention",
+      "at": 152.61200000000622,
+      "wall_monotonic": 65577.315518041,
+      "type": "manual_recenter",
+      "pose": {
+        "frame_id": 1423,
+        "observed_at": 152.61200000000622,
+        "x_m": 0.49949988662170514,
+        "y_m": 0.5006073173252176,
+        "theta_rad": 1.1972018016669421,
+        "valid": true,
+        "quality": 1.0,
+        "calibration_id": "2faf633dcb4d2b7f",
+        "invalid_reason": null
+      }
+    },
+    {
+      "kind": "target",
+      "at": 152.61200000000622,
+      "wall_monotonic": 65577.315535291,
+      "target": [
+        0.34,
+        0.65
+      ]
+    },
+    {
+      "kind": "episode_started",
+      "at": 152.61200000000622,
+      "wall_monotonic": 65577.318630875,
+      "operation": "navigate",
+      "owner_id": "cli"
+    },
+    {
+      "kind": "navigation_result",
+      "at": 156.89200000000233,
+      "wall_monotonic": 65577.464390833,
+      "success": true,
+      "final_distance_m": 0.05841868457010001,
+      "actions": 9,
+      "elapsed_s": 4.279999999996107,
+      "target": [
+        0.34,
+        0.65
+      ]
+    },
+    {
+      "kind": "stop",
+      "at": 156.89200000000233,
+      "wall_monotonic": 65577.473206,
+      "reason": "explicit simulated manual recenter",
+      "fault": false
+    },
+    {
+      "kind": "intervention",
+      "at": 156.89300000000233,
+      "wall_monotonic": 65577.478561125,
+      "type": "manual_recenter",
+      "pose": {
+        "frame_id": 1472,
+        "observed_at": 156.89300000000233,
+        "x_m": 0.49945605640680024,
+        "y_m": 0.5006608266173423,
+        "theta_rad": -1.297305164379296,
+        "valid": true,
+        "quality": 1.0,
+        "calibration_id": "2faf633dcb4d2b7f",
+        "invalid_reason": null
+      }
+    },
+    {
+      "kind": "target",
+      "at": 156.89300000000233,
+      "wall_monotonic": 65577.478578541,
+      "target": [
+        0.65,
+        0.34
+      ]
+    },
+    {
+      "kind": "episode_started",
+      "at": 156.89300000000233,
+      "wall_monotonic": 65577.481208208,
+      "operation": "navigate",
+      "owner_id": "cli"
+    },
+    {
+      "kind": "navigation_result",
+      "at": 160.75299999999882,
+      "wall_monotonic": 65577.613615458,
+      "success": true,
+      "final_distance_m": 0.037079833744370634,
+      "actions": 8,
+      "elapsed_s": 3.8599999999964894,
+      "target": [
+        0.65,
+        0.34
+      ]
+    },
+    {
+      "kind": "stop",
+      "at": 160.75299999999882,
+      "wall_monotonic": 65577.626264833,
+      "reason": "explicit simulated manual recenter",
+      "fault": false
+    },
+    {
+      "kind": "intervention",
+      "at": 160.75399999999883,
+      "wall_monotonic": 65577.631575416,
+      "type": "manual_recenter",
+      "pose": {
+        "frame_id": 1517,
+        "observed_at": 160.75399999999883,
+        "x_m": 0.4995650289950424,
+        "y_m": 0.5007745746779789,
+        "theta_rad": 2.695007169693073,
+        "valid": true,
+        "quality": 1.0,
+        "calibration_id": "2faf633dcb4d2b7f",
+        "invalid_reason": null
+      }
+    },
+    {
+      "kind": "target",
+      "at": 160.75399999999883,
+      "wall_monotonic": 65577.631593291,
+      "target": [
+        0.35,
+        0.35
+      ]
+    },
+    {
+      "kind": "episode_started",
+      "at": 160.75399999999883,
+      "wall_monotonic": 65577.634436125,
+      "operation": "navigate",
+      "owner_id": "cli"
+    },
+    {
+      "kind": "navigation_result",
+      "at": 165.45399999999455,
+      "wall_monotonic": 65577.795260583,
+      "success": true,
+      "final_distance_m": 0.03700662325951918,
+      "actions": 10,
+      "elapsed_s": 4.699999999995725,
+      "target": [
+        0.35,
+        0.35
+      ]
+    },
+    {
+      "kind": "stop",
+      "at": 165.45399999999455,
+      "wall_monotonic": 65577.80844125,
+      "reason": "runtime closed",
+      "fault": false
+    }
+  ],
+  "stop_reason": "runtime closed",
+  "frame_age_ms": 0,
+  "ack_age_ms": 919.9999999991633,
+  "heldout_sample_count": 12,
+  "recovery_phase": "adapted model validated",
+  "owner_id": null,
+  "latest_residual": {
+    "v_mps": 0.0003666264469578129,
+    "omega_radps": -0.0064865472673028
+  },
+  "faults": {},
+  "model_ready": true,
+  "observation_mode": "vision",
+  "actions": 10,
+  "error": "cancelled episode"
+}

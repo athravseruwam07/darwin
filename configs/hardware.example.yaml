@@ -1,0 +1,19 @@
+# Template only. Geometry below is placeholder, NOT measured. Cannot arm until
+# readiness and calibration gates are explicitly completed with the team.
+mode: hardware
+camera_backend: oak
+hardware_confirmed: false
+serial_port: null
+calibration_path: null
+timestamp_bound_ms: null
+measured_probe_bound_m: null
+# Confirm these stationary tolerances against measured camera jitter.
+stationary_position_tolerance_m: 0.002
+stationary_yaw_tolerance_rad: 0.03
+stationary_window_s: 0.15
+host: 127.0.0.1
+port: 8770
+robot_radius_m: 0.08
+arena_width_m: 1.0
+arena_height_m: 1.0
+boundary_margin_m: 0.15

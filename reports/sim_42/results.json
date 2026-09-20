@@ -1,0 +1,359 @@
+{
+  "mode": "SIMULATION",
+  "cases": 1,
+  "seeds": [
+    42
+  ],
+  "variants": [
+    "linear"
+  ],
+  "mappings": [
+    "reverse_one"
+  ],
+  "failures": [],
+  "navigation": {
+    "before_navigation": {
+      "successes": 4,
+      "trials": 4,
+      "success_fraction": 1.0
+    },
+    "frozen_navigation": {
+      "successes": 0,
+      "trials": 4,
+      "success_fraction": 0.0
+    },
+    "adapted_navigation": {
+      "successes": 4,
+      "trials": 4,
+      "success_fraction": 1.0
+    }
+  },
+  "cases_detail": [
+    {
+      "seed": 42,
+      "mapping": "reverse_one",
+      "variant": "linear",
+      "observation": "vision",
+      "run_id": "20260919T213530.230366Z_b16f0c5496",
+      "run_path": "/Users/athravseruwam/Documents/GitHub/darwin_robot/data/runs/20260919T213530.230366Z_b16f0c5496",
+      "thresholds": {
+        "goal_radius_m": 0.06,
+        "max_actions": 100,
+        "max_seconds": 45,
+        "dwell_ms": 500,
+        "safe_bounds": [
+          0.22999999999999998,
+          0.77,
+          0.22999999999999998,
+          0.77
+        ],
+        "success_fraction_target": 0.8,
+        "normalized_prediction_reduction_target": 0.8
+      },
+      "interventions": [
+        "explicit recenter before baseline task",
+        "explicit recenter before baseline task",
+        "explicit recenter before baseline task",
+        "explicit recenter before baseline task",
+        "explicit recenter before scramble",
+        "explicit recenter before frozen task",
+        "explicit recenter before frozen task",
+        "explicit recenter before frozen task",
+        "explicit recenter before frozen task",
+        "explicit recenter before recovery",
+        "explicit recenter before adapted task",
+        "explicit recenter before adapted task",
+        "explicit recenter before adapted task",
+        "explicit recenter before adapted task"
+      ],
+      "before_navigation": [
+        {
+          "success": true,
+          "final_distance_m": 0.03875342799226043,
+          "actions": 9,
+          "elapsed_s": 4.280000000000669,
+          "target": [
+            0.67,
+            0.65
+          ],
+          "task": {
+            "target": [
+              0.67,
+              0.65
+            ],
+            "heading": 0.0
+          }
+        },
+        {
+          "success": true,
+          "final_distance_m": 0.05841868457010001,
+          "actions": 9,
+          "elapsed_s": 4.280000000000669,
+          "target": [
+            0.34,
+            0.65
+          ],
+          "task": {
+            "target": [
+              0.34,
+              0.65
+            ],
+            "heading": 1.2
+          }
+        },
+        {
+          "success": true,
+          "final_distance_m": 0.037079833744370634,
+          "actions": 8,
+          "elapsed_s": 3.8600000000006034,
+          "target": [
+            0.65,
+            0.34
+          ],
+          "task": {
+            "target": [
+              0.65,
+              0.34
+            ],
+            "heading": -1.3
+          }
+        },
+        {
+          "success": true,
+          "final_distance_m": 0.03700662325951918,
+          "actions": 10,
+          "elapsed_s": 4.700000000000294,
+          "target": [
+            0.35,
+            0.35
+          ],
+          "task": {
+            "target": [
+              0.35,
+              0.35
+            ],
+            "heading": 2.7
+          }
+        }
+      ],
+      "frozen_navigation": [
+        {
+          "success": false,
+          "actions": 19,
+          "final_distance_m": 0.37176538613911,
+          "reason": "boundary / footprint margin",
+          "elapsed_s": 8.399999999998329,
+          "task": {
+            "target": [
+              0.67,
+              0.65
+            ],
+            "heading": 0.0
+          }
+        },
+        {
+          "success": false,
+          "actions": 99,
+          "final_distance_m": 0.18350017237392874,
+          "reason": "episode action budget",
+          "elapsed_s": 42.000000000005606,
+          "task": {
+            "target": [
+              0.34,
+              0.65
+            ],
+            "heading": 1.2
+          }
+        },
+        {
+          "success": false,
+          "actions": 17,
+          "final_distance_m": 0.38678007790087626,
+          "reason": "boundary / footprint margin",
+          "elapsed_s": 7.560000000003868,
+          "task": {
+            "target": [
+              0.65,
+              0.34
+            ],
+            "heading": -1.3
+          }
+        },
+        {
+          "success": false,
+          "actions": 99,
+          "final_distance_m": 0.18729023910050352,
+          "reason": "episode action budget",
+          "elapsed_s": 42.00000000001408,
+          "task": {
+            "target": [
+              0.35,
+              0.35
+            ],
+            "heading": 2.7
+          }
+        }
+      ],
+      "adapted_navigation": [
+        {
+          "success": true,
+          "final_distance_m": 0.03875342799226043,
+          "actions": 9,
+          "elapsed_s": 4.279999999996107,
+          "target": [
+            0.67,
+            0.65
+          ],
+          "task": {
+            "target": [
+              0.67,
+              0.65
+            ],
+            "heading": 0.0
+          }
+        },
+        {
+          "success": true,
+          "final_distance_m": 0.05841868457010001,
+          "actions": 9,
+          "elapsed_s": 4.279999999996107,
+          "target": [
+            0.34,
+            0.65
+          ],
+          "task": {
+            "target": [
+              0.34,
+              0.65
+            ],
+            "heading": 1.2
+          }
+        },
+        {
+          "success": true,
+          "final_distance_m": 0.037079833744370634,
+          "actions": 8,
+          "elapsed_s": 3.8599999999964894,
+          "target": [
+            0.65,
+            0.34
+          ],
+          "task": {
+            "target": [
+              0.65,
+              0.34
+            ],
+            "heading": -1.3
+          }
+        },
+        {
+          "success": true,
+          "final_distance_m": 0.03700662325951918,
+          "actions": 10,
+          "elapsed_s": 4.699999999995725,
+          "target": [
+            0.35,
+            0.35
+          ],
+          "task": {
+            "target": [
+              0.35,
+              0.35
+            ],
+            "heading": 2.7
+          }
+        }
+      ],
+      "prediction": {
+        "current": {
+          "v_rmse_mps": 0.0002845882184391051,
+          "omega_rmse_radps": 0.0027037017568486955,
+          "v_mae_mps": 0.00026456236277262274,
+          "omega_mae_radps": 0.0022067284614124727,
+          "normalized_rmse": 0.003713026548937671,
+          "normalization_scales": [
+            0.08,
+            0.7
+          ],
+          "count": 12,
+          "zero_baseline_v_rmse_mps": 0.0378366654157585,
+          "zero_baseline_omega_rmse_radps": 0.48822060975099024
+        },
+        "fit": {
+          "training_count": 24,
+          "feature_rank": 3,
+          "condition_number": 1.5165581630215235,
+          "action_min": [
+            -1.0,
+            -1.0
+          ],
+          "action_max": [
+            1.0,
+            1.0
+          ],
+          "training": {
+            "v_rmse_mps": 0.0002597343041320572,
+            "omega_rmse_radps": 0.0016549879250838382,
+            "v_mae_mps": 0.00024757121456982174,
+            "omega_mae_radps": 0.0013720102428687762,
+            "normalized_rmse": 0.0028399549831705415,
+            "normalization_scales": [
+              0.08,
+              0.7
+            ],
+            "count": 24
+          }
+        },
+        "before": {
+          "v_rmse_mps": 0.000318021383235859,
+          "omega_rmse_radps": 0.002209916318261734,
+          "v_mae_mps": 0.0002895831186500879,
+          "omega_mae_radps": 0.001566299107680828,
+          "normalized_rmse": 0.00358953661506412,
+          "normalization_scales": [
+            0.08,
+            0.7
+          ],
+          "count": 12,
+          "zero_baseline_v_rmse_mps": 0.037878890454302955,
+          "zero_baseline_omega_rmse_radps": 0.3660709613099983
+        },
+        "frozen": {
+          "v_rmse_mps": 0.04778419428441341,
+          "omega_rmse_radps": 0.689602361655915,
+          "v_mae_mps": 0.03795997399856316,
+          "omega_mae_radps": 0.5468338626974488,
+          "normalized_rmse": 0.814642034112935,
+          "normalization_scales": [
+            0.08,
+            0.7
+          ],
+          "count": 12
+        },
+        "adapted": {
+          "v_rmse_mps": 0.0002845882184391051,
+          "omega_rmse_radps": 0.0027037017568486955,
+          "v_mae_mps": 0.00026456236277262274,
+          "omega_mae_radps": 0.0022067284614124727,
+          "normalized_rmse": 0.003713026548937671,
+          "normalization_scales": [
+            0.08,
+            0.7
+          ],
+          "count": 12,
+          "zero_baseline_v_rmse_mps": 0.0378366654157585,
+          "zero_baseline_omega_rmse_radps": 0.48822060975099024
+        }
+      },
+      "prediction_error_reduction": 0.9954421372904225,
+      "valid_training_count": 24,
+      "heldout_count": 12,
+      "invalid_samples": 0,
+      "boundary_stops": 2,
+      "error": null
+    }
+  ],
+  "prediction_reduction_min": 0.9954421372904225,
+  "prediction_reduction_mean": 0.9954421372904225,
+  "passed": true
+}

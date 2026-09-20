@@ -1,0 +1,23 @@
+/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python -m darwin.cli fit --run /Users/athravseruwam/Documents/GitHub/darwin_robot/data/runs/20260919T213530.230366Z_b16f0c5496 --output checkpoints/refit_sample.json
+{
+  "checkpoint": "checkpoints/refit_sample.json",
+  "model_id": "0129121c62625583",
+  "training_count": 24
+}
+/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python -m darwin.cli evaluate --run /Users/athravseruwam/Documents/GitHub/darwin_robot/data/runs/20260919T213530.230366Z_b16f0c5496 --checkpoint checkpoints/refit_sample.json
+{
+  "v_rmse_mps": 0.0002845882184391051,
+  "omega_rmse_radps": 0.0027037017568486955,
+  "v_mae_mps": 0.00026456236277262274,
+  "omega_mae_radps": 0.0022067284614124727,
+  "normalized_rmse": 0.003713026548937671,
+  "normalization_scales": [
+    0.08,
+    0.7
+  ],
+  "count": 12
+}
+/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python -m darwin.cli export --run /Users/athravseruwam/Documents/GitHub/darwin_robot/data/runs/20260919T213530.230366Z_b16f0c5496 --output reports/export
+{
+  "path": "/Users/athravseruwam/Documents/GitHub/darwin_robot/reports/export/20260919T213530.230366Z_b16f0c5496_4ceba1e2.zip"
+}

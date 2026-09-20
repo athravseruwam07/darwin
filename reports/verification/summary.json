@@ -1,0 +1,129 @@
+{
+  "completed_utc": "2026-09-19T21:36:13.493313+00:00",
+  "mode": "software only",
+  "passed": true,
+  "commands": [
+    {
+      "name": "doctor",
+      "command": [
+        "/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python",
+        "-m",
+        "darwin.cli",
+        "doctor"
+      ],
+      "exit_code": 0,
+      "seconds": 0.12963691698678304,
+      "log": "/Users/athravseruwam/Documents/GitHub/darwin_robot/reports/verification/doctor.log"
+    },
+    {
+      "name": "tests",
+      "command": [
+        "/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "exit_code": 0,
+      "seconds": 14.040206332996604,
+      "log": "/Users/athravseruwam/Documents/GitHub/darwin_robot/reports/verification/tests.log"
+    },
+    {
+      "name": "marker",
+      "command": [
+        "/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python",
+        "-m",
+        "darwin.cli",
+        "marker",
+        "--id",
+        "7",
+        "--output",
+        "reports/robot_marker.png"
+      ],
+      "exit_code": 0,
+      "seconds": 0.16199383299681358,
+      "log": "/Users/athravseruwam/Documents/GitHub/darwin_robot/reports/verification/marker.log"
+    },
+    {
+      "name": "vision",
+      "command": [
+        "/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python",
+        "-m",
+        "darwin.cli",
+        "vision-test",
+        "--synthetic",
+        "--output",
+        "reports/vision"
+      ],
+      "exit_code": 0,
+      "seconds": 0.5771621669991873,
+      "log": "/Users/athravseruwam/Documents/GitHub/darwin_robot/reports/verification/vision.log"
+    },
+    {
+      "name": "protocol",
+      "command": [
+        "/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python",
+        "-m",
+        "darwin.cli",
+        "protocol-test",
+        "--fake"
+      ],
+      "exit_code": 0,
+      "seconds": 0.17516629099554848,
+      "log": "/Users/athravseruwam/Documents/GitHub/darwin_robot/reports/verification/protocol.log"
+    },
+    {
+      "name": "simulation",
+      "command": [
+        "/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python",
+        "-m",
+        "darwin.cli",
+        "simulate",
+        "--seed",
+        "42",
+        "--output",
+        "reports/sim_42"
+      ],
+      "exit_code": 0,
+      "seconds": 5.306779834005283,
+      "log": "/Users/athravseruwam/Documents/GitHub/darwin_robot/reports/verification/simulation.log"
+    },
+    {
+      "name": "benchmark",
+      "command": [
+        "/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python",
+        "-m",
+        "darwin.cli",
+        "benchmark",
+        "--seeds",
+        "11,22,33,44,55",
+        "--output",
+        "reports/benchmark"
+      ],
+      "exit_code": 0,
+      "seconds": 36.38630137500877,
+      "log": "/Users/athravseruwam/Documents/GitHub/darwin_robot/reports/verification/benchmark.log"
+    },
+    {
+      "name": "server",
+      "command": [
+        "/Users/athravseruwam/Documents/GitHub/darwin_robot/venv/bin/python",
+        "scripts/server_smoke.py"
+      ],
+      "exit_code": 0,
+      "seconds": 1.0151952089945553,
+      "log": "/Users/athravseruwam/Documents/GitHub/darwin_robot/reports/verification/server.log"
+    },
+    {
+      "name": "firmware",
+      "command": [
+        "bash",
+        "firmware/compile.sh"
+      ],
+      "exit_code": 0,
+      "seconds": 0.6814787500043167,
+      "log": "/Users/athravseruwam/Documents/GitHub/darwin_robot/reports/verification/firmware.log"
+    }
+  ],
+  "skipped": [],
+  "physical_hardware_verified": false
+}
