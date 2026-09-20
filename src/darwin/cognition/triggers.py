@@ -94,7 +94,7 @@ def operator_trigger(command, payload=None):
 
 def _boot(facts):
     return Trigger('boot','boot','darwin','Runtime online',
-        f'Runtime online in {facts["mode"]} mode. I have no validated motion model yet, so my two commands still mean nothing to me.',
+        'New body, blank slate—time to learn the controls.',
         _chips(('mode',facts['mode']),('state',facts['state'])),priority=4)
 
 def _state_changed(before,after,*names):
@@ -108,29 +108,29 @@ def detect_triggers(before, after):
     change,previous=after['change'],before['change']
     if after['stop_reason'] and after['stop_reason']!=before['stop_reason']:
         out.append(Trigger('stopped','fault','darwin','Motion stopped',
-            f'Stopped: {after["stop_reason"]}. Motor output is cut until an operator restarts me.',
+            'I stopped before that got embarrassing.',
             _chips(('reason',after['stop_reason'])),priority=1))
     if before['tracking_valid'] and not after['tracking_valid']:
         out.append(Trigger('tracking_lost','fault','darwin','Marker lost',
-            'I lost the marker. Without a camera measurement I cannot verify any prediction, so I hold still.',
+            'I lost sight of myself, so I stopped.',
             _chips(('frame age',f'{_i(after["frame_age_ms"])} ms')),priority=1))
     if _state_changed(before,after,'PROBING'):
         out.append(Trigger('probing','work','darwin','Probing my body',
-            'Running independent probe pulses. I watch the camera after each one to learn what the two commands actually do.',
+            'Let me wiggle a little and see what happens.',
             _chips(('valid samples',_i(after['samples']['valid']))),priority=4))
     if _state_changed(before,after,'FITTING'):
         out.append(Trigger('fitting','work','darwin','Fitting the model',
-            'Fitting the ridge model over left command, right command and bias, then scoring it on held-out trials I never trained on.',
+            'I think I’m getting the hang of this body.',
             _chips(('held-out',_i(after['samples']['heldout']))),priority=4))
     if _state_changed(before,after,'RECOVERING'):
         out.append(Trigger('experiments','focus','darwin','Designing experiments',
-            'Old model frozen. I am choosing the most informative commands I can safely run and re-measuring my body from scratch.',
+            'Fine, I’ll learn these controls again.',
             _chips(('valid samples',_i(after['samples']['valid']))),priority=2))
     ratio,previous_ratio=change['ratio'],previous['ratio']
     if (ratio is not None and previous_ratio is not None and not change['detected'] and not previous['detected']
             and ratio>=SUSPICION_RATIO>previous_ratio):
         out.append(Trigger('suspicion','curious','darwin','Something feels off',
-            f'Something is off. My predictions are missing by {_n(change["score"],3)} against a {_n(change["threshold"],3)} threshold — suspicious, but not yet enough evidence to act on.',
+            'That move felt suspicious.',
             _chips(('score',_n(change['score'],3)),('threshold',_n(change['threshold'],3)),
                    ('consecutive',_i(change['consecutive_count']))),priority=2))
     sensed,was_sensed=after['sensed_change'],before['sensed_change']
@@ -138,8 +138,7 @@ def detect_triggers(before, after):
     if (change['detected'] or sensed) and not (previous['detected'] or was_sensed):
         score=(sensed or change).get('score'); threshold=(sensed or change).get('threshold')
         out.append(Trigger('change_detected','alarm','darwin','My body changed',
-            f'My controls are not what they were. Camera residuals reached {_n(score,2)} against my {_n(threshold,2)} threshold on '
-            f'{_i(change["consecutive_count"])} consecutive observations, so this is a real body change and not one noisy pulse. Stopping before I drive further on a wrong model.',
+            'Who scrambled my controls?',
             _chips(('score',_n(score,3)),('threshold',_n(threshold,3)),
                    ('evidence',_i(change['evidence_count'])),('source','camera residual')),priority=1))
     if after['model_id'] and after['model_id']!=before['model_id'] and after['model_ready']:
@@ -148,38 +147,36 @@ def detect_triggers(before, after):
             frozen=(after['metrics']['frozen'] or {}).get('normalized_rmse')
             adapted=(after['metrics']['adapted'] or after['metrics']['current'] or {}).get('normalized_rmse')
             out.append(Trigger('adapted','resolved','darwin','New body learned',
-                f'Refit and validated on held-out trials. The frozen model scored {_n(frozen,4)} normalized error, the adapted model {_n(adapted,4)} — '
-                f'{_n(improvement,1)}% better. I understand this body again.',
+                'New controls, same Darwin.',
                 _chips(('frozen',_n(frozen,4)),('adapted',_n(adapted,4)),
                        ('improvement',None if improvement is None else f'{improvement:.1f}%'),
                        ('model',after['model_id'])),priority=1))
         else:
             current=(after['metrics']['current'] or {}).get('normalized_rmse')
             out.append(Trigger('model_fitted','resolved','darwin','Baseline model validated',
-                f'Model {after["model_id"]} passed held-out validation at {_n(current,4)} normalized error. I can now predict my own forward speed and yaw before I move.',
+                'Okay, I know what my wheels do now.',
                 _chips(('model',after['model_id']),('held-out error',_n(current,4)),
                        ('valid samples',_i(after['samples']['valid']))),priority=2))
     if _state_changed(before,after,'NAVIGATING'):
         resumed=after['adaptation_complete']
         out.append(Trigger('resumed' if resumed else 'navigating','focus','darwin',
             'Resuming navigation' if resumed else 'Navigating',
-            ('Back on the original target with the relearned model, checking every pulse against the camera.' if resumed else
-             'Driving toward the target. I predict each pulse first, then compare it with what the camera actually measures.'),
+            ('Back on track.' if resumed else 'I know where I’m going—probably.'),
             _chips(('distance',None if after['distance_to_target_m'] is None else f'{after["distance_to_target_m"]:.3f} m'),
                    ('model',after['model_id'])),priority=3))
     if after['boundary_recovery'] and not before['boundary_recovery']:
         out.append(Trigger('boundary','curious','darwin','Leaving the safe area',
-            'I drifted into the green buffer. Turning inward before my footprint reaches the red arena line.',priority=2))
+            'Too close to the edge—turning back.',priority=2))
     if before['boundary_recovery'] and not after['boundary_recovery']:
         out.append(Trigger('boundary_clear','work','darwin','Back inside the buffer',
-            'Back inside the green operating area. Resuming the original target.',priority=4))
+            'Much better—back to the target.',priority=4))
     if _state_changed(before,after,'GOAL'):
         out.append(Trigger('goal','resolved','darwin','Target reached',
-            f'Target reached. My footprint is {_n(after["distance_to_target_m"],3)} m from the point I was given, measured by the overhead camera.',
+            'Made it.',
             _chips(('final distance',None if after['distance_to_target_m'] is None else f'{after["distance_to_target_m"]:.3f} m')),priority=1))
     if (before['model_id'] and not after['model_id'] and not after['busy']
             and after['state'] in {'DISARMED','READY'} and not after['sensed_change']):
         out.append(Trigger('model_reset','work','darwin','Model cleared',
-            'My learned model was cleared. I am back to knowing nothing about what my commands do.',priority=4))
+            'Well, back to square one.',priority=4))
     out.sort(key=lambda trigger:trigger.priority)
     return out

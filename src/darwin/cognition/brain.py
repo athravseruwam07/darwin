@@ -42,7 +42,7 @@ class Brain:
     """Collects sensed triggers, narrates them, and optionally speaks them."""
 
     def __init__(self, *, enabled=True, thought_writer=None, voice=None, voice_enabled=True,
-                 max_thoughts=40, min_interval_s=2., clock=time.monotonic):
+                 max_thoughts=40, min_interval_s=6., clock=time.monotonic):
         self.enabled=bool(enabled)
         self.thought_writer=thought_writer if self.enabled else None
         self.voice=voice if self.enabled else None
@@ -51,7 +51,7 @@ class Brain:
         self.clock=clock
         self._lock=threading.RLock()
         self._thoughts=[]; self._audio={}; self._facts=None
-        self._last_at={}; self._pending=0; self._error=None
+        self._last_at={}; self._last_darwin_at=None; self._pending=0; self._error=None
         self._queue=queue.Queue(maxsize=32); self._worker=None; self._closed=False
 
     @classmethod
@@ -71,7 +71,7 @@ class Brain:
         return cls(enabled=bool(getattr(config,'brain_enabled',True)),thought_writer=writer,voice=voice,
                    voice_enabled=bool(getattr(config,'brain_voice_enabled',True)),
                    max_thoughts=int(getattr(config,'brain_max_thoughts',40)),
-                   min_interval_s=float(getattr(config,'brain_min_interval_s',2.)))
+                   min_interval_s=float(getattr(config,'brain_min_interval_s',6.)))
 
     def observe(self, snapshot, config=None):
         """Feed one runtime snapshot; returns the thoughts this snapshot produced."""
@@ -79,7 +79,10 @@ class Brain:
         facts=cognition_facts(snapshot,config)
         with self._lock:
             previous,self._facts=self._facts,facts
-        return [thought for trigger in detect_triggers(previous,facts) if (thought:=self._record(trigger,facts))]
+        for trigger in detect_triggers(previous,facts):
+            thought=self._record(trigger,facts)
+            if thought is not None: return [thought]
+        return []
 
     def operator_action(self, command, payload=None):
         """Record what the operator did. This channel is never Darwin's voice."""
@@ -92,10 +95,11 @@ class Brain:
     def _record(self, trigger, facts, rate_limit=True):
         now=self.clock()
         with self._lock:
-            if rate_limit and trigger.priority>2:
-                last=self._last_at.get(trigger.kind)
-                if last is not None and now-last<self.min_interval_s: return None
+            if (rate_limit and trigger.channel=='darwin' and trigger.priority>1 and
+                    self._last_darwin_at is not None and now-self._last_darwin_at<self.min_interval_s):
+                return None
             self._last_at[trigger.kind]=now
+            if trigger.channel=='darwin': self._last_darwin_at=now
             sentence=clean(trigger.fallback) or 'Waiting for new evidence.'
             thought=Thought(uuid.uuid4().hex[:12],now,trigger.kind,trigger.tone,trigger.channel,
                             trigger.headline,sentence,sentence,chips=trigger.chips,facts=facts)

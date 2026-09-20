@@ -51,7 +51,7 @@ def test_triggers_follow_sensed_transitions_not_operator_buttons():
     assert 'change_detected' in kinds
     change=[t for t in detect_triggers(rising,detected) if t.kind=='change_detected'][0]
     assert change.channel=='darwin' and change.tone=='alarm'
-    assert '0.42' in change.fallback and '0.25' in change.fallback
+    assert change.fallback=='Who scrambled my controls?'
 
 
 def test_operator_mutation_is_a_separate_channel_that_darwin_cannot_see():
@@ -71,7 +71,7 @@ def test_adaptation_triggers_report_measured_improvement():
         'adapted':{'normalized_rmse':.0065},'current':{'normalized_rmse':.0065}}},None)
     triggers=detect_triggers(before,after)
     adapted=[t for t in triggers if t.kind=='adapted']
-    assert adapted and '98' in adapted[0].fallback
+    assert adapted and adapted[0].fallback=='New controls, same Darwin.'
 
 
 def test_supported_numbers_rejects_invented_measurements():
@@ -101,7 +101,21 @@ def test_openai_writer_posts_facts_and_degrades_to_fallback():
 def test_monologue_is_always_one_sentence():
     assert clean('I noticed a change. I will test it now.')=='I noticed a change.'
     assert clean('One concise thought without punctuation')=='One concise thought without punctuation'
-    assert len(clean('x'*300))==160
+    assert clean('My error is 0.29.') is None
+    assert len(clean('x'*300))==72
+
+
+def test_brain_uses_one_global_cooldown_and_one_thought_per_snapshot():
+    now=[0.0]
+    brain=Brain(enabled=True,min_interval_s=6,clock=lambda:now[0])
+    assert len(brain.observe(BASE))==1
+    now[0]=1
+    assert brain.observe({**BASE,'state':'NAVIGATING','busy':True})==[]
+    now[0]=7
+    produced=brain.observe({**BASE,'state':'FAULT','busy':False,'stop_reason':'tracking invalid',
+                            'pose':{**BASE['pose'],'valid':False}})
+    assert len(produced)==1
+    brain.close()
 
 
 def test_elevenlabs_voice_requests_mp3_bytes():

@@ -133,10 +133,12 @@ narration system. The default ElevenLabs voice must work on free API accounts;
 if cloud speech fails, the dashboard may use local browser speech so narration
 remains audible without exposing credentials.
 
-The visible monologue is intentionally one thought at a time: one sentence,
-160 characters maximum, with no tone labels, headlines, chips, source badges,
-timestamps, provider names, or operator entries. While enrichment is pending,
-the gray sentence uses a restrained white text glint and gradual reveal; honor
+The visible monologue is intentionally one thought at a time: one playful
+sentence, 72 characters maximum, and no digits or measurements. Use a global
+cooldown and publish at most one sensed reaction per snapshot. Keep tone labels,
+headlines, chips, source badges, timestamps, provider names, and operator entries
+out of the visible monologue. While enrichment is pending, the gray sentence
+uses a restrained white text glint and gradual reveal; honor
 `prefers-reduced-motion`.
 
 The visual direction is a refined scientific instrument, not a generic neon AI
