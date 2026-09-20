@@ -20,6 +20,18 @@ def test_goal_contact_radius_uses_the_whole_robot_footprint():
     assert config.goal_contact_radius_m==.08
     assert config.public()['goal_contact_radius_m']==.08
 
+def test_cognition_settings_do_not_change_motion_model_identity():
+    baseline=Config()
+    changed=Config(
+        brain_enabled=False,
+        brain_model='another-model',
+        brain_timeout_s=9,
+        brain_voice_enabled=False,
+        brain_voice_id='another-voice',
+    )
+
+    assert changed.config_id==baseline.config_id
+
 def test_full_cycle_timing_and_boundaries():
     a=RequestedAction('a',(1.,0.),120)
     p=Pose(1,1,.5,.5,math.pi-.02)

@@ -14,3 +14,5 @@ data/calibration-*.json
 .DS_Store
 firmware/toolchain/
 firmware/build/
+.env
+.env.local

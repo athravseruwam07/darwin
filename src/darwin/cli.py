@@ -23,9 +23,15 @@ def serve(runtime,port):
             try: sock.bind(('127.0.0.1',candidate)); chosen=candidate; break
             except OSError: continue
     else: raise RuntimeError('no free localhost port in requested range')
+    app=create_app(runtime)
+    brain=app.state.brain.snapshot()
     print(f'DARWIN {runtime.snapshot()["mode"].upper()} http://127.0.0.1:{chosen}',flush=True)
-    try: uvicorn.run(create_app(runtime),host='127.0.0.1',port=chosen,log_level='info')
-    finally: runtime.close()
+    print('MONOLOGUE '+('disabled' if not brain['enabled'] else
+          (brain['provider']['model'] or 'local sentences (set OPENAI_API_KEY to rephrase)')+
+          ' · speech '+(brain['provider']['voice'] or 'off (set ELEVENLABS_API_KEY)')),flush=True)
+    try: uvicorn.run(app,host='127.0.0.1',port=chosen,log_level='info')
+    finally:
+        app.state.brain.close(); runtime.close()
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Darwin — local observed-motion learning')
@@ -41,6 +47,8 @@ def main(argv=None):
     p=sub.add_parser('protocol-test'); p.add_argument('--fake',action='store_true')
     for name in ['demo','calibrate']:
         p=sub.add_parser(name); p.add_argument('--mode',choices=['simulation','hardware']); p.add_argument('--config',default='configs/simulation.yaml'); p.add_argument('--ui-port',type=int,default=8770)
+        p.add_argument('--no-brain',action='store_true',help='disable the inner-monologue panel entirely')
+        p.add_argument('--no-voice',action='store_true',help='narrate in text only; never call the speech provider')
     p=sub.add_parser('fit'); p.add_argument('--run',required=True); p.add_argument('--output',required=True)
     p=sub.add_parser('evaluate'); p.add_argument('--run',required=True); p.add_argument('--checkpoint',required=True)
     p=sub.add_parser('replay'); p.add_argument('--run',required=True); p.add_argument('--ui-port',type=int,default=8771)
@@ -50,13 +58,16 @@ def main(argv=None):
     a=parser.parse_args(argv)
     try:
         if a.command=='doctor':
-            import cv2,numpy
+            import cv2,numpy,os
+            from darwin.cognition.providers import load_env_file
+            keys={**load_env_file(ROOT/'.env'),**os.environ}
             from serial.tools import list_ports
             info={'python':sys.version,'executable':sys.executable,'architecture':platform.machine(),'platform':platform.platform(),
                 'numpy':numpy.__version__,'opencv':cv2.__version__,'aruco':hasattr(cv2,'aruco'),'default_mode':'simulation',
                 'optional_depthai':importlib.metadata.version('depthai') if importlib.util.find_spec('depthai') else 'not installed; simulation unaffected',
                 'serial_ports':[{'device':port.device,'description':port.description,'vid':port.vid,'pid':port.pid} for port in list_ports.comports()],
-                'device_access':'serial ports enumerated read-only; no serial or camera opened'}
+                'device_access':'serial ports enumerated read-only; no serial or camera opened',
+                'narration_keys':{name:bool(keys.get(name)) for name in ('OPENAI_API_KEY','ELEVENLABS_API_KEY')}}
             dump(info)
         elif a.command=='marker':
             from darwin.vision.markers import generate_marker
@@ -80,7 +91,8 @@ def main(argv=None):
             dump(run_protocol_tests())
         elif a.command in {'demo','calibrate'}:
             from darwin.runtime import Runtime
-            config=load_config(a.config,mode=a.mode,port=a.ui_port)
+            config=load_config(a.config,mode=a.mode,port=a.ui_port,
+                brain_enabled=False if a.no_brain else None,brain_voice_enabled=False if a.no_voice else None)
             runtime=Runtime(config)
             if a.command=='calibrate' and config.mode=='hardware':
                 from darwin.io.camera import make_camera

@@ -35,6 +35,14 @@ The live-injection backend is covered across all six choices, including repeated
 
 Browser verification also exercised the exact requested flow: normal navigation began, the operator injected **reverse both wheels** mid-run, mismatch rose to **1.529 / 0.250**, the UI showed `RECOVERING` and fresh experiment collection, frozen yaw RMSE measured **1.4635 rad/s**, adapted yaw RMSE fell to **0.0148 rad/s**, and the resumed controller reached `GOAL` at approximately `(0.705, 0.309)` m for target `(0.720, 0.280)` m.
 
+## Inner monologue (new)
+
+- `darwin.cognition` turns the public runtime snapshot into a fact packet, detects sensed transitions, and publishes first-person thoughts. `GET /api/brain` serves them; `GET /api/brain/voice/<id>` serves synthesized speech; `POST /api/brain/voice` mutes synthesis.
+- Operator actions are recorded on a separate channel labelled `Darwin cannot see this`, so a pressed mutation button is never shown as a detection.
+- OpenAI rephrasing and ElevenLabs speech are optional, keyed from `.env` or the environment, and degrade to deterministic sentences. A rewrite containing a number the facts do not support is discarded.
+- Verified locally through the HTTP API in simulation: calibrate -> target -> navigate -> inject `reverse both` -> `Something feels off` (1.732 / 0.250) -> `My body changed` (1.735 / 0.250, 3 consecutive) -> `Designing experiments` -> `New body learned` (frozen 1.3744, adapted 0.0017, 99.9% better) -> `Resuming navigation` -> `Target reached` at 0.063 m. Browser verification confirmed the integrated inner-monologue card renders and updates in Observatory while Arena remains camera-and-controls only.
+- The real OpenAI and ElevenLabs endpoints have **not** been called: no keys are present on this computer. The urllib transport, request shape, and auth headers were verified against a local stub of both APIs.
+
 ## Software evidence
 
 - 45-case benchmark: 3 seeds × 3 plant variants × 5 mappings; no workflow errors.

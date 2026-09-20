@@ -117,6 +117,15 @@ Switching Arena and Observatory is client-side and must never interrupt the
 runtime or control lease. The renderer remains dependency-free Canvas/SVG, with
 no WebGL, cloud, or CDN requirement.
 
+The Observatory's **Darwin's inner monologue** card is implemented by
+`darwin.cognition` and `web/static/brain.js`. It turns allow-listed public runtime
+facts into deterministic thoughts, while operator mutations stay in a separate
+"Darwin cannot see this" channel. Optional OpenAI rephrasing and ElevenLabs voice
+use `.env` or environment variables only and must fail back to the deterministic
+sentence without affecting robot control. Keep this card in Observatory; Arena
+must remain camera and controls only. Extend this path instead of adding another
+narration system.
+
 The visual direction is a refined scientific instrument, not a generic neon AI
 dashboard: near-black field, warm paper typography, Darwin acid green, measured
 cyan, and stale-model amber. Animation must encode real state changes, respect

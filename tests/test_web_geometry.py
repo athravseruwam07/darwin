@@ -28,6 +28,9 @@ let cognition=cognitionState({model_id:'m1',events:[{kind:'mutation_injected'}],
 assert.strictEqual(cognition.key,'unaware');
 cognition=cognitionState({model_id:'m1',events:[{kind:'mutation_injected'}],change_detection:{detected:true,score:.8}});
 assert.strictEqual(cognition.key,'detected');
+assert.strictEqual(cognition.stage,1);
+assert.strictEqual(cognitionState({state:'RECOVERING',recovery_phase:'collecting fresh probes'}).stage,2);
+assert.strictEqual(cognitionState({adaptation_complete:true}).stage,3);
 assert.strictEqual(explainControl([.04,-.6]),'drives forward and turns right');
 assert.strictEqual(explainControl([-.04,.6]),'drives backward and turns left');
 assert.strictEqual(explainControl([0,0]),'has almost no effect');

@@ -39,6 +39,33 @@ Demo flow:
 
 The Arena dashboard shows mismatch score, action-space uncertainty, frozen/adapted motion ghosts, measured held-out errors, obstacle overlays, route, state machine, and immutable event trail. Open **Observatory** without reloading the runtime to inspect the learned 3D command-to-motion surface, camera observations, motor-influence graph, causal adaptation timeline, and before/frozen/adapted evidence. These are runtime values—not scripted animation or simulator truth.
 
+## Inner monologue panel
+
+A side rail on both Drive and Lab narrates what Darwin is doing, in Darwin's own voice. Every sentence is produced from a structured fact packet built out of the public runtime snapshot—state, phase, change score and threshold, sample counts, held-out errors, residuals, pose and distance. The learner's private inputs are unchanged: the panel never reads a simulator plant, an actuator mutation map, or any hidden answer.
+
+Two channels are kept visually separate:
+
+- **Darwin** (serif, tone-coloured) speaks only about things it could sense. A mutation shows up here as `Something feels off` when residuals rise, then `My body changed` once the detector's consecutive-evidence gate is crossed—never because a button was pressed.
+- **Operator** (dashed, sans, marked `Darwin cannot see this`) records what you did, including which mutation you applied.
+
+Each card carries the numbers it is claiming, and a provenance label: `runtime narration` for the deterministic sentence, `rephrased by LLM` when OpenAI rewrote it.
+
+### Optional OpenAI rephrasing and ElevenLabs speech
+
+Both are optional. Without keys the panel still narrates and the runtime is unaffected.
+
+```powershell
+Copy-Item .env.example .env
+notepad .env        # OPENAI_API_KEY=... and ELEVENLABS_API_KEY=...
+.\venv\Scripts\python.exe -m darwin.cli doctor        # narration_keys reports presence, never values
+```
+
+`.env` is git-ignored. Environment variables win over the file. The CLI prints which providers are active at startup, and `--no-brain` / `--no-voice` turn the panel or the speech off for a run.
+
+Only the fact packet is sent to OpenAI. A rewrite is rejected and the deterministic sentence is kept if it contains any number the facts do not support, so the panel cannot invent a measurement. Speech is synthesised per thought and served from `/api/brain/voice/<thought_id>`; press **Voice** in the Observatory's **Darwin's inner monologue** card to unmute (browsers require that gesture before audio can autoplay). Muting also tells the server to stop synthesising. Arena stays camera-and-controls only.
+
+Narration runs on its own worker thread. It never holds a runtime lock, never commands a motor, and cannot delay STOP.
+
 ## Hardware run on this computer
 
 The local measured config is `configs\hardware.local.yaml`. It names COM5, the OAK camera, marker 7, the saved 1 m × 1 m calibration, 90 PWM ceiling, and a provisional 3 cm probe bound. That file is intentionally excluded from the portable ZIP because another computer may use different ports and calibration.
@@ -82,6 +109,7 @@ Confirm both wheel polarities, STOP, host-loss watchdog, reconnect-disarmed beha
 ```powershell
 .\venv\Scripts\python.exe -m pytest -q
 node --check src\darwin\web\static\app.js
+node --check src\darwin\web\static\brain.js
 .\venv\Scripts\python.exe -m darwin.cli vision-test --synthetic --output reports\vision
 .\venv\Scripts\python.exe -m darwin.cli protocol-test --fake
 .\venv\Scripts\python.exe -m darwin.cli simulate --seed 42 --output reports\sim_42
@@ -106,6 +134,7 @@ The full Windows verifier is:
 - Controller: learned-model candidate search with footprint/boundary checks; single-wheel pivots are excluded from normal motion.
 - Obstacles: camera-derived circles/polygons are excluded from candidate swept paths. Keep detection disabled until the physical view is checked for false positives.
 - Safety: local-only server, ownership lease, continuous pose/transport checks, hard action/time limits, cancellation, firmware watchdog, fail-closed logging, and disarmed reconnect.
+- Narration: `darwin.cognition` projects the public snapshot onto a fact packet, detects sensed transitions, and publishes thoughts. Providers are best-effort and degrade to deterministic sentences.
 - Evidence: append-only JSONL records observations, commands, transitions, events, checkpoints, evaluations, exports, and privileged actuator audit separately.
 
 The hidden map lives only inside the simulator plant or hardware actuator. The learner and controller receive requested actions and observed motion only. Automatic recovery is designed for controlled software remaps; it is not a blanket claim that arbitrary mechanical damage can be diagnosed.
