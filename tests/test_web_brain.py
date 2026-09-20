@@ -74,12 +74,14 @@ def test_voice_audio_is_served_and_toggled_locally():
 
 def test_missing_keys_leave_a_working_local_monologue():
     runtime=Runtime()
-    client=TestClient(create_app(runtime))
+    brain=Brain.from_config(runtime.config,env={})
+    client=TestClient(create_app(runtime,brain=brain))
     client.get('/api/status')
     body=client.get('/api/brain').json()
     assert body['enabled'] is True and body['provider']['model'] is None
     assert body['thoughts'] and body['thoughts'][0]['source']=='local'
     assert client.get('/api/brain/voice/anything').status_code==204
+    brain.close()
 
 def test_brain_panel_is_shipped_with_the_dashboard():
     client=TestClient(create_app(Runtime()))

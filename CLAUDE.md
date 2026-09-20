@@ -129,7 +129,9 @@ facts into deterministic thoughts, while operator mutations stay in a separate
 use `.env` or environment variables only and must fail back to the deterministic
 sentence without affecting robot control. Keep this card in Observatory; Arena
 must remain camera and controls only. Extend this path instead of adding another
-narration system.
+narration system. The default ElevenLabs voice must work on free API accounts;
+if cloud speech fails, the dashboard may use local browser speech so narration
+remains audible without exposing credentials.
 
 The visual direction is a refined scientific instrument, not a generic neon AI
 dashboard: near-black field, warm paper typography, Darwin acid green, measured

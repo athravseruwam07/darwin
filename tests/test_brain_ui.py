@@ -36,6 +36,7 @@ assert.deepStrictEqual(brainStatus({enabled:true,thinking:true},true),{label:'Sp
 assert.deepStrictEqual(brainStatus({enabled:true},false),{label:'Listening',mode:'idle'});
 assert.deepStrictEqual(speakable(parsed,new Set()),['a']);
 assert.deepStrictEqual(speakable(parsed,new Set(['a'])),[]);
+assert.deepStrictEqual(speakable([{thought_id:'fallback',channel:'darwin',voice:'failed'}],new Set(),true),['fallback']);
 assert(providerLabel({enabled:true,provider:{}}).includes('OPENAI_API_KEY'));
 assert.strictEqual(providerLabel({enabled:true,provider:{model:'gpt-4o-mini',voice:'eleven_turbo_v2_5'}}),'gpt-4o-mini voice · eleven_turbo_v2_5');
 assert.strictEqual(providerLabel({enabled:false}),'narration disabled');

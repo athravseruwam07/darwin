@@ -32,6 +32,9 @@ def test_cognition_settings_do_not_change_motion_model_identity():
 
     assert changed.config_id==baseline.config_id
 
+def test_default_voice_is_available_to_free_elevenlabs_api_accounts():
+    assert Config().brain_voice_id=='SAz9YHcvj6GT2YYXdXww'
+
 def test_full_cycle_timing_and_boundaries():
     a=RequestedAction('a',(1.,0.),120)
     p=Pose(1,1,.5,.5,math.pi-.02)

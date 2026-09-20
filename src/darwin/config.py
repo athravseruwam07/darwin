@@ -66,7 +66,7 @@ class Config:
     brain_max_thoughts: int = 40
     brain_min_interval_s: float = 2.0
     brain_voice_enabled: bool = True
-    brain_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
+    brain_voice_id: str = "SAz9YHcvj6GT2YYXdXww"
     brain_voice_model: str = "eleven_turbo_v2_5"
     brain_voice_timeout_s: float = 12.0
 
