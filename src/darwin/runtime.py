@@ -68,6 +68,7 @@ class Runtime:
         self.trail=[]; self.predicted_motion=[]
         self.metrics={}; self.events=[]; self.recovery_phase='initial calibration required'
         self.samples=[]; self.heldout=[]; self.rejected=[]; self.latest_residual=None
+        self.latest_prediction_comparison=None
         self.change_detector=ResidualChangeDetector(threshold=self.config.mismatch_threshold,
             required_exceedances=self.config.mismatch_required_exceedances)
         self.change_detection=self.change_detector.status().to_dict(); self.change_detected=False; self._change_recovered=False
@@ -294,6 +295,11 @@ class Runtime:
         if self.model_ready:
             predicted=self.model.predict([action.u])[0]
             self.latest_residual={'v_mps':sample.v_mps-float(predicted[0]),'omega_radps':sample.omega_radps-float(predicted[1])}
+            self.latest_prediction_comparison={
+                'command':{'left':float(action.u[0]),'right':float(action.u[1])},
+                'expected':{'forward_mps':float(predicted[0]),'turn_radps':float(predicted[1])},
+                'observed':{'forward_mps':float(sample.v_mps),'turn_radps':float(sample.omega_radps)},
+            }
             if self.state=='NAVIGATING':
                 normalized=(self.latest_residual['v_mps']/.08,self.latest_residual['omega_radps']/.7)
                 status=self.change_detector.update(normalized)
@@ -590,7 +596,7 @@ class Runtime:
                 self.frozen_model=copy.deepcopy(self.model)
                 self.actuator.scramble(payload.get('mapping'))
                 self._drain_audit()
-                self.model_ready=False; self.samples=[]; self.heldout=[]; self.latest_residual=None
+                self.model_ready=False; self.samples=[]; self.heldout=[]; self.latest_residual=None; self.latest_prediction_comparison=None
                 self.change_detector.reset(); self.change_detection=self.change_detector.status().to_dict(); self.change_detected=False; self.body_change_signal=None
                 self.recovery_phase='scrambled; recover with fresh observations'
                 self._event('scramble',{'model_frozen':self.frozen_model.model_id})
@@ -598,7 +604,7 @@ class Runtime:
             if name in {'reset-model','reset'}:
                 from darwin.learning.model import MotionModel
                 self._stop('model reset'); self.model=MotionModel(ridge_lambda=self.config.ridge_lambda)
-                self.model_ready=False; self.frozen_model=None; self.samples=[]; self.heldout=[]; self.metrics={}; self.latest_residual=None; self.body_change_signal=None
+                self.model_ready=False; self.frozen_model=None; self.samples=[]; self.heldout=[]; self.metrics={}; self.latest_residual=None; self.latest_prediction_comparison=None; self.body_change_signal=None
                 self.recovery_phase='initial calibration required'; self._event('model_reset'); return {'ok':True}
             if name=='recenter':
                 if not self.env: raise ValueError('hardware must be manually repositioned')
@@ -623,7 +629,7 @@ class Runtime:
                 if width!=self.config.arena_width_m or height!=self.config.arena_height_m:
                     raise ValueError('arena dimensions must match config; restart with measured config')
                 self.calibration=Calibration.from_corners(points,width,height,(self.config.camera_width,self.config.camera_height),camera_id=payload.get('camera_id',self.config.camera_backend),heading_offset_rad=float(payload.get('heading_offset_rad',0)),marker_height_m=float(payload.get('marker_height_m',0)))
-                self.model_ready=False; self.frozen_model=None; self.samples=[]; self.heldout=[]; self.metrics={}; self.latest_residual=None; self.body_change_signal=None; self._stop('calibration changed; relearn required')
+                self.model_ready=False; self.frozen_model=None; self.samples=[]; self.heldout=[]; self.metrics={}; self.latest_residual=None; self.latest_prediction_comparison=None; self.body_change_signal=None; self._stop('calibration changed; relearn required')
                 self.calibration.save(ROOT/'data'/('calibration-'+self.calibration.calibration_id+'.json'))
                 self._observe(log=True); self._event('calibration',self.calibration.to_dict()); return {'ok':True,'calibration':self.calibration.to_dict()}
             if name=='connect':
@@ -710,7 +716,8 @@ class Runtime:
             'model_id':self.model.model_id if self.model_ready else None,'validation_metrics':self.metrics,
             'recovery_phase':self.recovery_phase,'busy':self.busy,'owner_id':self.safety.owner if self.safety.active else None,
             'calibration':self.calibration.to_dict() if self.calibration else None,'events':self.events[-25:],
-            'latest_residual':self.latest_residual,'change_detection':{**self.change_detection,'detected':self.change_detected},
+            'latest_residual':self.latest_residual,'latest_prediction_comparison':self.latest_prediction_comparison,
+            'change_detection':{**self.change_detection,'detected':self.change_detected},
             'body_change_signal':self.body_change_signal,
             'model_visualization':self._public_model_visualization(),
             'adaptation_complete':self._change_recovered,

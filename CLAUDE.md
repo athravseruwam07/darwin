@@ -93,31 +93,29 @@ the firmware watchdog must remain fail-closed.
 
 ## Darwin Observatory UI
 
-The projector-grade **Darwin Observatory** is implemented to make the real
-learn -> navigate -> mutate -> detect -> experiment -> relearn -> validate ->
-resume loop understandable within seconds.
+The **Arena** is intentionally only the live camera, simple current status, and
+the actions needed for the demo: calibrate, choose a target, navigate, alter the
+body mid-run, and stop. Do not put model IDs, raw coordinates, connection labels,
+or learning diagrams on this screen.
 
-Its distinctive centerpiece is a truthful 3D sensorimotor landscape:
+The **Observatory** explains genuine runtime evidence in judge-friendly language:
 
-- X: left-wheel command.
-- Y: right-wheel command.
-- Z: predicted forward speed or yaw rate.
-- Recorded observations are points; rejected samples are visibly distinct.
-- The pre-change frozen model is an amber wireframe.
-- The adapted model is cyan/green and changes only after a genuine model fit.
-- Prediction-to-observation residuals are shown from recorded measurements.
+- What Darwin expected versus what the camera observed on the latest pulse.
+- Whether repeated disagreement is normal, suspicious, or a detected change.
+- The active Watch -> Notice -> Experiment -> Prove stage.
+- A plain-English interpretation of each learned wheel-control coefficient.
+- Before/after prediction-error improvement on held-out movements.
+- A short causal event story from mutation through validation and recovery.
 
-It also includes a learned motor-influence graph, camera overlays for actual/frozen/
-adapted motion, a deterministic cognition rail, change score, experiment and
-validation progress, model-generation history, and a mutation-to-detection-to-
-recovery timeline. Human-language narration must be generated from structured
-runtime facts so a future LLM can rephrase it without inventing state.
+Raw model IDs, coordinates, RMSE tables, the 3D sensorimotor surface, fitted
+coefficient graph, immutable events, and diagnostics live in a collapsed
+**Technical proof** section. They remain available to technical judges without
+competing with the story. All narration must be derived from structured runtime
+facts so a future LLM may rephrase it without inventing state.
 
-Keep the primary Drive screen minimal and dramatic. Raw evidence and detailed
-metrics in a Lab overlay/view that does not reload or interrupt the runtime.
-The independent live mutation buttons and projector-friendly presenter mode are
-part of that interface. The renderer is dependency-free Canvas/SVG, so it has no
-WebGL, cloud, or CDN requirement.
+Switching Arena and Observatory is client-side and must never interrupt the
+runtime or control lease. The renderer remains dependency-free Canvas/SVG, with
+no WebGL, cloud, or CDN requirement.
 
 The visual direction is a refined scientific instrument, not a generic neon AI
 dashboard: near-black field, warm paper typography, Darwin acid green, measured

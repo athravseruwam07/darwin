@@ -28,6 +28,11 @@ let cognition=cognitionState({model_id:'m1',events:[{kind:'mutation_injected'}],
 assert.strictEqual(cognition.key,'unaware');
 cognition=cognitionState({model_id:'m1',events:[{kind:'mutation_injected'}],change_detection:{detected:true,score:.8}});
 assert.strictEqual(cognition.key,'detected');
+assert.strictEqual(explainControl([.04,-.6]),'drives forward and turns right');
+assert.strictEqual(explainControl([-.04,.6]),'drives backward and turns left');
+assert.strictEqual(explainControl([0,0]),'has almost no effect');
+assert.strictEqual(surpriseState({change_detection:{detected:true,score:.9}}).label,'Change detected');
+assert.strictEqual(surpriseState({latest_prediction_comparison:{},change_detection:{detected:false,score:.05}}).label,'Motion matches');
 const motorPoint=projectMotorPoint(-1,1,.5,640,420);
 assert(motorPoint.every(Number.isFinite));assert.strictEqual(motorPoint.length,2);
 assert.deepStrictEqual(normalizeModelField({grid_size:2,points:[{left:-1,right:1,v_mps:.2,omega_radps:.3},{left:0,right:0,v_mps:NaN,omega_radps:0}]}).points.length,1);
