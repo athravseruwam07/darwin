@@ -60,6 +60,15 @@ class Config:
     model_memory_match_distance: float = .15
     obstacle_detection_enabled: bool = False
     live_mutation_enabled: bool | None = None
+    brain_enabled: bool = True
+    brain_model: str = "gpt-4o-mini"
+    brain_timeout_s: float = 6.0
+    brain_max_thoughts: int = 40
+    brain_min_interval_s: float = 2.0
+    brain_voice_enabled: bool = True
+    brain_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
+    brain_voice_model: str = "eleven_turbo_v2_5"
+    brain_voice_timeout_s: float = 12.0
 
     def __post_init__(self):
         if self.live_mutation_enabled is None:
@@ -69,6 +78,10 @@ class Config:
                 raise ValueError(f"{k} must be finite")
         for key in ('port','seed','pulse_ms','settle_ms','initial_trials','validation_trials','goal_dwell_ms','max_episode_actions','max_frame_age_ms','operator_lease_ms','pwm_scale','max_pwm','fallback_ttl_ms','ack_timeout_ms','baudrate','camera_width','camera_height','camera_fps','marker_id','mismatch_required_exceedances','recovery_trials','recovery_validation_trials'):
             if type(getattr(self,key)) is not int: raise ValueError(f'{key} must be an integer')
+        if type(self.brain_enabled) is not bool or type(self.brain_voice_enabled) is not bool: raise ValueError('narration flags must be boolean')
+        if type(self.brain_max_thoughts) is not int or not 4 <= self.brain_max_thoughts <= 400: raise ValueError('invalid narration history size')
+        if min(self.brain_timeout_s, self.brain_voice_timeout_s) <= 0 or self.brain_min_interval_s < 0: raise ValueError('invalid narration timing')
+        if not all(isinstance(value, str) and value for value in (self.brain_model, self.brain_voice_id, self.brain_voice_model)): raise ValueError('narration model and voice identifiers must be non-empty strings')
         if type(self.hardware_confirmed) is not bool or type(self.obstacle_detection_enabled) is not bool or type(self.live_mutation_enabled) is not bool: raise ValueError('hardware, obstacle, and mutation flags must be boolean')
         if self.measured_probe_bound_m is not None and (not math.isfinite(self.measured_probe_bound_m) or self.measured_probe_bound_m <= 0): raise ValueError('invalid measured probe travel bound')
         if min(self.stationary_position_tolerance_m,self.stationary_yaw_tolerance_rad,self.stationary_window_s)<=0: raise ValueError('invalid stationary observation thresholds')

@@ -33,12 +33,13 @@ truth.
 - Default branch: `main`
 - Latest pushed baseline before the major UI redesign: `01a792a`
 - Verified on Windows 11 x64 with PowerShell and the repository-local `venv`.
-- Latest complete test run: **202 passed, 2 skipped, 0 failures**.
+- Latest complete test run: **230 passed, 0 failures** (macOS, Node present so the
+  two browser-contract tests run instead of skipping).
 - The dashboard normally uses <http://127.0.0.1:8770/>. Verify the listener and
   `/api/status` instead of assuming it is running.
-- Generated reports, local camera calibrations, `configs/*.local.yaml`, serial
-  device names, logs, exports, caches, and virtual environments are not portable
-  source and must not be committed.
+- Generated reports, local camera calibrations, `configs/*.local.yaml`, `.env`,
+  API keys, serial device names, logs, exports, caches, and virtual environments
+  are not portable source and must not be committed.
 
 There may be modified tracked files under `reports/` from local verification.
 They are generated evidence, not permission to overwrite, discard, or publish
@@ -107,6 +108,14 @@ The distinctive centerpiece should be a truthful 3D sensorimotor landscape:
 - The adapted model is cyan/green and changes only after a genuine model fit.
 - Prediction-to-observation residuals are shown from recorded measurements.
 
+An inner-monologue rail is already implemented in `darwin.cognition` plus
+`web/static/brain.js`. It narrates sensed transitions in Darwin's first person and
+records operator actions on a separate, visually distinct channel. OpenAI rephrasing
+and ElevenLabs speech are optional enrichments keyed from `.env`/environment only;
+without keys the deterministic sentences stand. A rewrite containing a number the
+fact packet does not support is discarded. Extend that module rather than adding a
+second narration path.
+
 Also include a learned motor-influence graph, camera overlays for actual/frozen/
 adapted motion, a deterministic cognition rail, change score, experiment and
 validation progress, model-generation history, and a mutation-to-detection-to-
@@ -158,6 +167,7 @@ py -3.13 -m venv venv
 # Test
 .\venv\Scripts\python.exe -m pytest -q
 node --check src\darwin\web\static\app.js
+node --check src\darwin\web\static\brain.js
 
 # Simulation
 .\venv\Scripts\python.exe -m darwin.cli demo --mode simulation --config configs\simulation.yaml --ui-port 8770
