@@ -1,5 +1,7 @@
-"""Deterministic firmware model and real POSIX PTY endpoint; no motor device access."""
-import os, pty, re, select, threading, time
+"""Deterministic firmware model with POSIX PTY or Windows in-memory serial."""
+import os, re, threading, time
+if os.name != 'nt':
+    import pty, select
 from .serial_link import SerialTransport, ProtocolError
 
 class FakeFirmware:
@@ -42,14 +44,21 @@ class FakeFirmware:
 
 class FakeEndpoint:
     def __init__(self):
-        self.master,self.slave=pty.openpty(); self.port=os.ttyname(self.slave)
         self.firmware=FakeFirmware(); self.faults=set(); self.commands=[]; self._stop=threading.Event()
-        self.thread=threading.Thread(target=self._run,daemon=True); self.thread.start()
+        if os.name == 'nt':
+            self.port='DARWIN_IN_MEMORY_FAKE'; self.master=self.slave=None
+            self.serial=_MemorySerial(self); self.thread=None
+        else:
+            self.master,self.slave=pty.openpty(); self.port=os.ttyname(self.slave)
+            self.serial=None; self.thread=threading.Thread(target=self._run,daemon=True); self.thread.start()
     def _emit(self,line):
         if 'missing_ack' in self.faults and line.startswith('OK M'): return
         if 'invalid_ack' in self.faults and line.startswith('OK M'): line='OK M 999999'
         if 'reset' in self.faults and line.startswith('OK M'):
             self.firmware.stop(); line='DARWIN_FW 1'
+        if self.serial is not None:
+            self.serial.enqueue(line)
+            return
         try: os.write(self.master,(line+'\r\n').encode())
         except OSError: pass
     def _run(self):
@@ -63,15 +72,60 @@ class FakeEndpoint:
                     for line in self.firmware.poll(): self._emit(line)
             except OSError: break
     def close(self):
-        self._stop.set(); self.thread.join(.2)
+        self._stop.set()
+        if self.thread is not None: self.thread.join(.2)
+        if self.serial is not None:
+            self.serial.close(); return
         for fd in (self.master,self.slave):
             try: os.close(fd)
             except OSError: pass
+
+class _MemorySerial:
+    """Minimal pyserial surface used only by Windows software tests."""
+    def __init__(self,endpoint):
+        self.endpoint=endpoint; self.timeout=.005; self.write_timeout=.1
+        self.is_open=True; self._responses=bytearray(); self._lock=threading.Lock()
+    def reopen(self):
+        with self._lock: self.is_open=True; self._responses.clear()
+    def enqueue(self,line):
+        with self._lock: self._responses.extend((line+'\r\n').encode('ascii'))
+    @property
+    def in_waiting(self):
+        for line in self.endpoint.firmware.poll(): self.endpoint._emit(line)
+        with self._lock: return len(self._responses)
+    def write(self,data):
+        if not self.is_open: raise OSError('fake serial disconnected')
+        self.endpoint.commands.append(data)
+        for line in self.endpoint.firmware.feed(data): self.endpoint._emit(line)
+        return len(data)
+    def read(self,size=1):
+        if not self.is_open: raise OSError('fake serial disconnected')
+        deadline=time.monotonic()+self.timeout
+        while time.monotonic()<deadline:
+            self.in_waiting
+            with self._lock:
+                if self._responses:
+                    chunk=bytes(self._responses[:size]); del self._responses[:size]; return chunk
+            time.sleep(.0005)
+        return b''
+    def reset_input_buffer(self):
+        with self._lock: self._responses.clear()
+    def reset_output_buffer(self): pass
+    def close(self): self.is_open=False; self.endpoint.firmware.stop()
 
 class FakeTransport(SerialTransport):
     def __init__(self,port=None,baudrate=115200,ack_timeout_ms=100):
         self.endpoint=FakeEndpoint()
         super().__init__(self.endpoint.port,baudrate,ack_timeout_ms,startup_wait_s=0)
+    def connect(self):
+        if os.name != 'nt': return super().connect()
+        self.close(); self.endpoint.serial.reopen(); self._serial=self.endpoint.serial
+        self.health.update(connected=True,armed=False,error=None)
+        try:
+            self.handshake(); self.stop()
+            if self.health.get('error') or not self.health.get('connected'): raise ProtocolError('connection STOP failed')
+        except Exception:
+            self.close(); raise
     def fault(self,name,enabled=True):
         if name=='disconnect' and enabled:
             self.endpoint.close(); self.health.update(connected=False,armed=False,error='injected disconnect'); return
@@ -107,4 +161,5 @@ def run_protocol_tests():
         try: transport.send_motor(1,20,20,150); results['disconnect']=False
         except ProtocolError: results['disconnect']=True
     finally: transport.shutdown()
-    return {'mode':'fake firmware + actual pyserial POSIX PTY','scenarios':results,'passed':all(results.values()),'scenario_count':len(results),'hardware_verified':False}
+    backend='in-process Windows serial fake' if os.name=='nt' else 'actual pyserial POSIX PTY'
+    return {'mode':'fake firmware + '+backend,'scenarios':results,'passed':all(results.values()),'scenario_count':len(results),'hardware_verified':False}

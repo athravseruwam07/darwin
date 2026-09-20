@@ -9,7 +9,7 @@ from darwin.config import Config
 from darwin.io.fake_serial import FakeTransport
 from darwin.runtime import Runtime
 from darwin.safety import SafetyViolation
-from darwin.types import RequestedAction
+from darwin.types import Pose, RequestedAction
 from darwin.vision.calibration import Calibration
 from darwin.vision.markers import render_frame
 
@@ -113,6 +113,27 @@ def test_settling_requires_distinct_fresh_observations(hardware_factory):
     runtime=create(); runtime.command('connect'); generation=begin_internal_episode(runtime)
     with pytest.raises(SafetyViolation): runtime._wait_stationary(generation)
     assert not motor_writes(serials[-1])
+
+
+def test_stationary_suffix_ignores_motion_before_the_required_stable_window():
+    from darwin.runtime import stationary_suffix_span
+
+    poses = [
+        Pose(1, 1.00, 0.10, 0.10, 0.20),
+        Pose(2, 1.05, 0.20, 0.20, 0.40),
+        Pose(3, 1.10, 0.30, 0.30, 0.60),
+        Pose(4, 1.15, 0.3002, 0.3001, 0.601),
+        Pose(5, 1.20, 0.3001, 0.3002, 0.599),
+        Pose(6, 1.25, 0.3000, 0.3001, 0.600),
+    ]
+    assert stationary_suffix_span(poses, position_tolerance_m=.002, yaw_tolerance_rad=.03) == pytest.approx(.15)
+
+
+def test_stationary_suffix_rejects_continuing_motion():
+    from darwin.runtime import stationary_suffix_span
+
+    poses = [Pose(index, index * .05, index * .003, 0.0, index * .04) for index in range(1, 7)]
+    assert stationary_suffix_span(poses, position_tolerance_m=.002, yaw_tolerance_rad=.03) == 0.0
 
 
 def test_moving_observations_never_unlock_pulse(hardware_factory):

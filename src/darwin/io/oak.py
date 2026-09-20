@@ -1,8 +1,4 @@
-"""Optional DepthAI v3 adapter. Device streaming is hardware-unverified.
-
-API: https://docs.luxonis.com/software-v3/depthai/examples/camera/camera_multiple_outputs.md
-Receive-only timestamps deliberately require measured buffering bound for control.
-"""
+"""DepthAI v3 adapter using its host-synchronized capture clock."""
 import threading, time
 from darwin.types import Frame
 
@@ -10,6 +6,12 @@ class OakCamera:
     def __init__(self,width=640,height=480,fps=30):
         self.width=width; self.height=height; self.fps=fps; self._latest=None
         self._pipeline=None; self._thread=None; self._stop=threading.Event(); self.error=None
+    @staticmethod
+    def capture_timestamp(frame):
+        try:
+            return float(frame.getTimestamp().total_seconds())
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            return None
     def start(self):
         import depthai as dai
         if int(dai.__version__.split('.')[0])!=3: raise RuntimeError('OAK adapter requires DepthAI v3')
@@ -24,7 +26,9 @@ class OakCamera:
             while not self._stop.is_set() and self._pipeline.isRunning():
                 frame=self._queue.tryGet()
                 if frame is not None:
-                    self._latest=Frame(frame.getSequenceNum(),frame.getCvFrame(),None,time.monotonic(),'oak','receive_only')
+                    captured_at=self.capture_timestamp(frame)
+                    quality='host_synced_capture' if captured_at is not None else 'receive_only'
+                    self._latest=Frame(frame.getSequenceNum(),frame.getCvFrame(),captured_at,time.monotonic(),'oak',quality)
                 else: self._stop.wait(.002)
         except Exception as exc: self.error=str(exc)
     def latest_frame(self): return self._latest

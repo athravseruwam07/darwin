@@ -99,5 +99,10 @@ def test_export_refuses_symlinks_and_truncates_only_incomplete_record(tmp_path):
     archive=export_run(writer.path,tmp_path/'exports',allowed_root=tmp_path/'exports')
     with zipfile.ZipFile(archive) as zipped:
         assert zipped.read('events.jsonl')==b'{"event":"complete"}\n'
-    (writer.path/'escape').symlink_to(tmp_path/'exports')
+    try:
+        (writer.path/'escape').symlink_to(tmp_path/'exports',target_is_directory=True)
+    except OSError as error:
+        if getattr(error,'winerror',None)==1314:
+            pytest.skip('Windows symlink privilege is unavailable')
+        raise
     with pytest.raises(ValueError,match='symlink'): export_run(writer.path,tmp_path/'exports',allowed_root=tmp_path/'exports')

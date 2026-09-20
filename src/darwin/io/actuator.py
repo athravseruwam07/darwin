@@ -8,6 +8,7 @@ class HardwareActuator:
         self.transport=transport; self.config=config; self.safety_check=safety_check
         self._map=np.eye(2); self._generation=0; self._sequence=0; self._lock=threading.RLock()
         self._executing=threading.Lock(); self.audit_records=[]
+        self._rng=np.random.default_rng(config.seed+104729)
     def _check(self,generation):
         if generation!=self._generation: raise RuntimeError('cancelled by STOP')
         if self.safety_check:
@@ -51,9 +52,36 @@ class HardwareActuator:
     def scramble(self,name=None):
         self.stop()
         if self._executing.locked(): raise RuntimeError('wait for cancelled action before scramble')
-        maps={'identity':np.eye(2),'swap':np.array([[0,1],[1,0]]),'reverse_one':np.diag([-1,1]),'reverse_both':-np.eye(2),'unequal':np.diag([.7,1.])}
-        if name is None: name='reverse_one'
+        maps={'identity':np.eye(2),'swap':np.array([[0,1],[1,0]]),
+              'reverse_left':np.diag([-1,1]),'reverse_right':np.diag([1,-1]),
+              'reverse_both':-np.eye(2),'unequal':np.diag([.7,1.])}
+        aliases={'reverse_one':'reverse_left','reverse-one':'reverse_left','reverse-left':'reverse_left',
+                 'reverse-right':'reverse_right','reverse-both':'reverse_both',
+                 'unequal_gains':'unequal','unequal-gains':'unequal','weaken_left':'unequal'}
+        if name is None: name='reverse_left'
+        name=aliases.get(name,name)
         if name not in maps: raise ValueError('unknown scramble')
         self._map=maps[name]; identity=uuid.uuid4().hex[:12]
         self.audit_records.append({'event':'scramble','change_id':identity,'at':time.monotonic(),'mapping':self._map.tolist()})
+        return identity
+    def mutate(self,name):
+        self.stop()
+        if self._executing.locked(): raise RuntimeError('mutation must be applied between pulses')
+        maps={'reverse_left':np.diag([-1,1]),'reverse_right':np.diag([1,-1]),
+              'reverse_both':-np.eye(2),'swap':np.array([[0,1],[1,0]]),'weaken_left':np.diag([.7,1.])}
+        if name=='random_mashup':
+            keys=tuple(maps); matrix=None; recipe=[]
+            for _ in range(32):
+                count=int(self._rng.integers(2,len(keys)+1)); chosen=self._rng.choice(keys,size=count,replace=False)
+                candidate=np.eye(2)
+                for key in chosen: candidate=maps[str(key)]@candidate
+                if (np.isfinite(candidate).all() and np.linalg.matrix_rank(candidate)==2 and
+                        np.max(np.abs(candidate))<=1 and np.linalg.norm(candidate-np.eye(2))>.1):
+                    matrix=candidate; recipe=[str(key) for key in chosen]; break
+            if matrix is None: raise RuntimeError('could not generate safe nonidentity mutation')
+        elif name in maps: matrix=maps[name]; recipe=[name]
+        else: raise ValueError('unknown mutation')
+        self._map=matrix; identity=uuid.uuid4().hex[:12]
+        self.audit_records.append({'event':'mutation','change_id':identity,'at':time.monotonic(),
+                                   'mapping':self._map.tolist(),'recipe':recipe})
         return identity

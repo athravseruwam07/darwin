@@ -16,15 +16,42 @@ import uuid
 import cv2
 import numpy as np
 from darwin.config import Config
-from darwin.types import Frame, Pose, RequestedAction
+from darwin.types import Frame, Pose
 from darwin.episodes import transition
 from darwin.safety import SafetySupervisor, SafetyViolation
 
 ROOT=Path(__file__).resolve().parents[2]
 
+
+def stationary_suffix_span(poses, *, position_tolerance_m, yaw_tolerance_rad,
+                           max_frame_gap_s=.15):
+    """Measure the newest uninterrupted stationary span in camera time."""
+    valid = [pose for pose in poses if pose.valid]
+    if len(valid) < 3:
+        return 0.0
+    latest = valid[-1]
+    stable = [latest]
+    newer = latest
+    for pose in reversed(valid[:-1]):
+        if pose.frame_id == newer.frame_id:
+            continue
+        gap = newer.observed_at - pose.observed_at
+        if pose.frame_id >= newer.frame_id or gap <= 0 or gap > max_frame_gap_s:
+            break
+        position_delta = math.hypot(pose.x_m-latest.x_m, pose.y_m-latest.y_m)
+        yaw_delta = abs(math.atan2(math.sin(pose.theta_rad-latest.theta_rad),
+                                   math.cos(pose.theta_rad-latest.theta_rad)))
+        if position_delta > position_tolerance_m or yaw_delta > yaw_tolerance_rad:
+            break
+        stable.append(pose)
+        newer = pose
+    return latest.observed_at-stable[-1].observed_at if len(stable) >= 3 else 0.0
+
 class Runtime:
     def __init__(self, config: Config | None=None, *, realtime=True, run_root=None):
         from darwin.learning.model import MotionModel
+        from darwin.learning.change_detection import ResidualChangeDetector
+        from darwin.learning.model_memory import BodyModelMemory
         from darwin.control.policy import Policy
         from darwin.recording.writer import RunWriter
         from darwin.vision.calibration import Calibration
@@ -37,12 +64,26 @@ class Runtime:
         self.model=MotionModel(ridge_lambda=self.config.ridge_lambda)
         self.frozen_model=None; self.model_ready=False
         self.policy=Policy(self.config)
-        self.pose=None; self.target=None; self.trail=[]; self.predicted_motion=[]
+        self.pose=None; self.target=None; self.route=[]; self.route_index=None
+        self.trail=[]; self.predicted_motion=[]
         self.metrics={}; self.events=[]; self.recovery_phase='initial calibration required'
         self.samples=[]; self.heldout=[]; self.rejected=[]; self.latest_residual=None
+        self.change_detector=ResidualChangeDetector(threshold=self.config.mismatch_threshold,
+            required_exceedances=self.config.mismatch_required_exceedances)
+        self.change_detection=self.change_detector.status().to_dict(); self.change_detected=False; self._change_recovered=False
+        self.body_change_signal=None
+        self.model_memory=BodyModelMemory(); self.matched_model_id=None
+        self.model_uncertainty=None; self.frozen_predicted_motion=[]; self.adapted_predicted_motion=[]
+        self.obstacles=[]; self._last_obstacle_frame=None
+        self.boundary_recovery_active=False
+        self.obstacle_detector=None
+        if self.config.obstacle_detection_enabled:
+            from darwin.vision.obstacles import ObstacleDetector
+            self.obstacle_detector=ObstacleDetector(robot_marker_id=self.config.marker_id)
         self.frame=None; self.frame_seq=0; self.last_receipt=None
         self.faults={}; self._job=None; self._job_error=None; self._job_result=None
         self._cancel=threading.Event(); self._audit_index=0; self._monitor_error=None
+        self._pending_mutations=[]
         self._pose_history=[]
         self.camera=None; self.env=None; self.transport=None; self.actuator=None
         self._hardware_connected=False; self._last_snapshot_log=0.
@@ -111,6 +152,15 @@ class Runtime:
                         self.pose=Pose(frame.id,frame.captured_at or frame.received_at,0,0,0,False,0,'uncalibrated','calibration required')
             if self.pose and (not self._pose_history or self._pose_history[-1].frame_id!=self.pose.frame_id):
                 self._pose_history.append(self.pose); self._pose_history=self._pose_history[-100:]
+            if (self.obstacle_detector and self.frame and self.calibration and
+                    self.frame.id!=self._last_obstacle_frame and self.frame.id%3==0):
+                detected=self.obstacle_detector.detect(self.frame,self.calibration)
+                self.obstacles=[]
+                for obstacle in detected:
+                    item=obstacle.to_dict()
+                    item.update(x_m=item['center_m'][0],y_m=item['center_m'][1],points=item['polygon_m'])
+                    self.obstacles.append(item)
+                self._last_obstacle_frame=self.frame.id
             if self.pose and log:
                 self.writer.append('observations',asdict(self.pose))
                 if self.frame:
@@ -129,20 +179,37 @@ class Runtime:
 
     def _wait_stationary(self,generation):
         if self.env: return
+        # Each gate requires a fresh camera-time window. Host receive latency is
+        # checked separately by SafetySupervisor and must not shorten this span.
+        with self.lock:
+            self._pose_history=[]
         deadline=time.monotonic()+2.
+        span=0.
+        max_gap=min(self.config.max_frame_age_ms/1000,
+                    max(.12,4/self.config.camera_fps))
         while time.monotonic()<deadline:
             self._observe(); self._check(generation)
-            recent=[p for p in self._pose_history if p.valid and self.now-p.observed_at<=self.config.stationary_window_s+.1]
-            if len(recent)>=3 and recent[-1].observed_at-recent[0].observed_at>=self.config.stationary_window_s:
-                origin=recent[-1]
-                if all(math.hypot(p.x_m-origin.x_m,p.y_m-origin.y_m)<=self.config.stationary_position_tolerance_m and abs(math.atan2(math.sin(p.theta_rad-origin.theta_rad),math.cos(p.theta_rad-origin.theta_rad)))<=self.config.stationary_yaw_tolerance_rad for p in recent): return
+            span=stationary_suffix_span(self._pose_history,
+                position_tolerance_m=self.config.stationary_position_tolerance_m,
+                yaw_tolerance_rad=self.config.stationary_yaw_tolerance_rad,
+                max_frame_gap_s=max_gap)
+            if span>=self.config.stationary_window_s:
+                return
             self._cancel.wait(.01)
+        self._event('stationary_timeout',{'observed_stationary_span_s':span,
+            'required_stationary_span_s':self.config.stationary_window_s,
+            'position_tolerance_m':self.config.stationary_position_tolerance_m,
+            'yaw_tolerance_rad':self.config.stationary_yaw_tolerance_rad,
+            'frame_count':len(self._pose_history),'max_frame_gap_s':max_gap})
         raise SafetyViolation('robot has not measurably settled')
 
-    def _check(self, generation, exploration=False):
+    def _check(self, generation, exploration=False, allow_boundary_recovery=None):
         if self.faults.get('stale_frames'): raise SafetyViolation('stale frame')
         if self.faults.get('queue_backlog'): raise SafetyViolation('command queue backlog')
-        self.safety.check(self.pose,self.now,generation,transport_healthy=self._healthy(),exploration=exploration)
+        if allow_boundary_recovery is None:
+            allow_boundary_recovery=(self.state=='NAVIGATING' and self.model_ready)
+        self.safety.check(self.pose,self.now,generation,transport_healthy=self._healthy(),
+            exploration=exploration,allow_boundary_recovery=allow_boundary_recovery)
 
     def _hardware_check(self):
         try: self._check(self.safety.generation,exploration=self.state in {'PROBING','RECOVERING'})
@@ -151,19 +218,29 @@ class Runtime:
 
     def _monitor_loop(self):
         while not self.closed:
+            monitored_generation=self.safety.generation if self.safety.active else None
             try:
                 if self.config.mode=='hardware':
                     if self.transport and hasattr(self.transport,'poll_health'): self.transport.poll_health()
                     self._observe()
                 if self.safety.active:
                     with self.lock:
-                        self._check(self.safety.generation,exploration=self.state in {'PROBING','RECOVERING'})
+                        monitored_generation=self.safety.generation
+                        self._check(monitored_generation,exploration=self.state in {'PROBING','RECOVERING'})
                 if time.monotonic()-self._last_snapshot_log>.25:
                     self.writer.append('snapshots',self.snapshot())
                     self._last_snapshot_log=time.monotonic()
             except Exception as exc:
+                # An old monitor iteration must never cancel a newly started
+                # episode after the generation changed on another thread.
+                current_episode=(monitored_generation is not None and self.safety.active and
+                                 self.safety.generation==monitored_generation)
+                if monitored_generation is not None and not current_episode:
+                    time.sleep(.02)
+                    continue
                 self._monitor_error=str(exc)
-                if self.safety.active: self._stop(str(exc),fault=True)
+                if current_episode:
+                    self._stop(str(exc),fault=True)
             time.sleep(.02)
 
     def _stop(self, reason='operator stop', fault=False):
@@ -173,6 +250,7 @@ class Runtime:
             try: self.actuator.stop()
             except Exception: pass
         with self.lock:
+            self._pending_mutations=[]
             self.state='FAULT' if fault else 'DISARMED'; self.stop_reason=reason
             self.predicted_motion=[]
         try:
@@ -208,6 +286,7 @@ class Runtime:
         self.writer.append('transitions',asdict(sample))
         self.safety.assert_current(generation)
         self.safety.actions+=1
+        self.safety.budget_actions+=1
         if not sample.valid:
             self.rejected.append(sample)
             raise SafetyViolation(sample.rejection_reason)
@@ -215,6 +294,11 @@ class Runtime:
         if self.model_ready:
             predicted=self.model.predict([action.u])[0]
             self.latest_residual={'v_mps':sample.v_mps-float(predicted[0]),'omega_radps':sample.omega_radps-float(predicted[1])}
+            if self.state=='NAVIGATING':
+                normalized=(self.latest_residual['v_mps']/.08,self.latest_residual['omega_radps']/.7)
+                status=self.change_detector.update(normalized)
+                self.change_detection=status.to_dict()
+                self.change_detected=self.change_detected or status.detected
         self._check(generation,exploration)
         if self.realtime and self.env:
             self._cancel.wait((self.config.pulse_ms+self.config.settle_ms)/1000)
@@ -222,14 +306,21 @@ class Runtime:
         return sample
 
     def _learn(self, generation, recovery=False):
-        from darwin.control.exploration import probe_actions
+        from darwin.control.exploration import probe_actions, recovery_probe_actions
         from darwin.learning.model import MotionModel, evaluate
+        from darwin.learning.model_memory import ResponseSignature
+        self.safety.begin_budget_window(self.now)
         self._set_state(generation,'RECOVERING' if recovery else 'PROBING')
         self.recovery_phase='collecting fresh probes' if recovery else 'initial probes'
         episode=uuid.uuid4().hex
         training=[]; heldout=[]
-        for role,count,seed in [('train',self.config.initial_trials,self.config.seed+len(self.events)),('heldout',self.config.validation_trials,self.config.seed+10007+len(self.events))]:
-            for action in probe_actions(seed,count,self.config.pulse_ms,episode+':'+role):
+        roles=[('train',self.config.recovery_trials if recovery else self.config.initial_trials,self.config.seed+len(self.events)),
+               ('heldout',self.config.recovery_validation_trials if recovery else self.config.validation_trials,self.config.seed+10007+len(self.events))]
+        for role,count,seed in roles:
+            actions = (recovery_probe_actions(seed,count,self.config.pulse_ms,episode+':'+role,
+                       candidate_levels=self.config.candidate_levels,active=role=='train')
+                       if recovery else probe_actions(seed,count,self.config.pulse_ms,episode+':'+role))
+            for action in actions:
                 sample=self._pulse(action,generation,exploration=True)
                 (training if role=='train' else heldout).append(sample)
                 if role=='train': self.samples.append(sample)
@@ -255,20 +346,47 @@ class Runtime:
                 self.metrics['adapted']=current
             else: self.metrics['before']=current
             ckpt=Path(self.writer.path)/'checkpoints'; ckpt.mkdir(exist_ok=True)
-            model.save(ckpt/(model.model_id+'.json'))
+            checkpoint=ckpt/(model.model_id+'.json'); model.save(checkpoint)
+            signature=ResponseSignature(tuple(float(value) for value in model.coefficients.ravel()))
+            matched=self.model_memory.match(signature,max_distance=self.config.model_memory_match_distance)
+            self.matched_model_id=matched.checkpoint_id if matched else None
+            self.model_memory.add(signature,checkpoint_id=model.model_id,checkpoint_path=str(checkpoint),
+                validation_metrics={'normalized_rmse':current['normalized_rmse'],'v_rmse_mps':current['v_rmse_mps'],
+                                    'omega_rmse_radps':current['omega_rmse_radps']},validated=True)
+            self.model_memory.save(Path(self.writer.path)/'model_memory.json')
+            self.model_uncertainty=current['normalized_rmse']
             self._event('evaluation',{'metrics':self.metrics,'training_action_ids':[s.action_id for s in training], 'heldout_action_ids':[s.action_id for s in heldout]})
             self.recovery_phase='adapted model validated' if recovery else 'model validated'
             self.state='READY'; self.stop_reason=None
         return {'model_id':model.model_id,'metrics':self.metrics}
 
     def _navigate(self,generation):
+        self.safety.begin_budget_window(self.now)
         self._set_state(generation,'NAVIGATING'); target=self.target
         started=self.now; count=0
         while True:
-            pose=self._observe()
-            self._check(generation)
-            distance=math.hypot(target[0]-pose.x_m,target[1]-pose.y_m)
-            if distance<=self.config.goal_radius_m:
+            with self.lock:
+                pose=self._observe()
+                self._check(generation)
+                distance=math.hypot(target[0]-pose.x_m,target[1]-pose.y_m)
+                mutation_waiting=bool(self._pending_mutations)
+            operating=self.config.safe_bounds
+            inside_operating=(operating[0]<=pose.x_m<=operating[1] and operating[2]<=pose.y_m<=operating[3])
+            hysteresis=min(.002,self.config.boundary_margin_m/10)
+            inside_recovered=(operating[0]+hysteresis<=pose.x_m<=operating[1]-hysteresis and
+                              operating[2]+hysteresis<=pose.y_m<=operating[3]-hysteresis)
+            if not self.boundary_recovery_active and not inside_operating:
+                self.boundary_recovery_active=True
+                self.recovery_phase='returning inward from green safety buffer'
+                self._event('boundary_recovery_started',{'pose':asdict(pose),'target':target})
+            elif self.boundary_recovery_active and inside_recovered:
+                self.boundary_recovery_active=False
+                self.recovery_phase='inside green operating boundary; target navigation resumed'
+                self._event('boundary_recovered',{'pose':asdict(pose),'target':target})
+            if mutation_waiting:
+                self._apply_pending_mutations(generation)
+                continue
+            if distance<=self.config.goal_contact_radius_m and not self.boundary_recovery_active:
                 self.actuator.stop()
                 # Dwell is observed stationary time, not a single proximity frame.
                 for _ in range(max(2,math.ceil(self.config.goal_dwell_ms/50))):
@@ -278,7 +396,7 @@ class Runtime:
                         if self.realtime: self._cancel.wait(.05)
                     else: self._cancel.wait(.05)
                     pose=self._observe(log=True); self._check(generation)
-                    if math.hypot(target[0]-pose.x_m,target[1]-pose.y_m)>self.config.goal_radius_m: break
+                    if math.hypot(target[0]-pose.x_m,target[1]-pose.y_m)>self.config.goal_contact_radius_m: break
                 else:
                     with self.lock:
                         self.safety.assert_current(generation)
@@ -286,25 +404,90 @@ class Runtime:
                     result={'success':True,'final_distance_m':math.hypot(target[0]-pose.x_m,target[1]-pose.y_m),'actions':count,'elapsed_s':self.now-started,'target':target}
                     self._event('navigation_result',result); return result
                 continue
-            action=self.policy.choose(pose,target,self.model,{'bounds':self.config.safe_bounds})
-            if action is None: raise SafetyViolation('no safe useful learned action')
+            recovery_target=(
+                min(max(pose.x_m,operating[0]+hysteresis),operating[1]-hysteresis),
+                min(max(pose.y_m,operating[2]+hysteresis),operating[3]-hysteresis),
+            )
+            objective=recovery_target if self.boundary_recovery_active else target
+            action=self.policy.choose(pose,objective,self.model,{
+                'bounds':self.config.boundary_recovery_bounds if self.boundary_recovery_active else operating,
+                'recovery_bounds':operating if self.boundary_recovery_active else None,
+                'physical_bounds':self.config.physical_bounds,
+                'obstacles':[item for item in self.obstacles if item.get('confidence',0)>=.55],
+                'obstacle_padding_m':.01})
+            if action is None:
+                reason='no safe inward recovery action' if self.boundary_recovery_active else 'no safe useful learned action'
+                raise SafetyViolation(reason)
             action=replace(action,episode_id='navigation:'+str(generation))
             pred=self.model.predict([action.u])[0]
             dt=(self.config.pulse_ms+self.config.settle_ms)/1000
             theta=pose.theta_rad+float(pred[1])*dt/2
             self.predicted_motion=[{'x_m':pose.x_m,'y_m':pose.y_m},{'x_m':pose.x_m+float(pred[0])*dt*math.cos(theta),'y_m':pose.y_m+float(pred[0])*dt*math.sin(theta)}]
+            self.adapted_predicted_motion=list(self.predicted_motion)
+            if self.frozen_model is not None:
+                frozen=self.frozen_model.predict([action.u])[0]
+                frozen_theta=pose.theta_rad+float(frozen[1])*dt/2
+                self.frozen_predicted_motion=[{'x_m':pose.x_m,'y_m':pose.y_m},
+                    {'x_m':pose.x_m+float(frozen[0])*dt*math.cos(frozen_theta),'y_m':pose.y_m+float(frozen[0])*dt*math.sin(frozen_theta)}]
             self._pulse(action,generation); count+=1
+            self._apply_pending_mutations(generation)
+            if self.change_detection.get('detected'):
+                self.frozen_model=copy.deepcopy(self.model)
+                self.body_change_signal={
+                    'kind':'body_model_mismatch','source':'camera_prediction_residual',
+                    'score':self.change_detection.get('score'),'threshold':self.change_detection.get('threshold'),
+                    'evidence_count':self.change_detection.get('evidence_count'),
+                    'consecutive_count':self.change_detection.get('consecutive_count'),
+                    'privileged_mutation_signal':False,'detected_at':self.now,
+                }
+                mismatch_event={key:value for key,value in self.body_change_signal.items() if key!='kind'}
+                self._event('model_mismatch',{'signal_kind':self.body_change_signal['kind'],
+                    **mismatch_event,'frozen_model_id':self.frozen_model.model_id})
+                self.recovery_phase='body model mismatch detected; selecting informative experiments'
+                self.model_ready=False
+                self._learn(generation,recovery=True)
+                self._change_recovered=True
+                self.change_detector.reset()
+                self.change_detection=self.change_detector.status().to_dict()
+                self.safety.begin_budget_window(self.now)
+                self._set_state(generation,'NAVIGATING')
+
+    def _apply_pending_mutations(self,generation):
+        with self.lock:
+            self.safety.assert_current(generation)
+            pending,self._pending_mutations=self._pending_mutations,[]
+        if not pending: return
+        for name,request_id in pending:
+            self.actuator.mutate(name)
+            self._drain_audit()
+
+    def _navigate_route(self,generation):
+        started=self.now; results=[]
+        for index,point in enumerate(tuple(self.route)):
+            with self.lock:
+                self.safety.assert_current(generation)
+                self.route_index=index
+                self.target=(point['x_m'],point['y_m'])
+            results.append(self._navigate(generation))
+        result={'success':True,'waypoints':len(results),'actions':self.safety.actions,
+                'elapsed_s':self.now-started,'target':self.target}
+        self._event('route_result',result)
+        return result
 
     def _run_job(self,name,generation):
         try:
-            self._job_result=self._navigate(generation) if name=='navigate' else self._learn(generation,name=='recover')
+            if name in {'navigate','adaptation-challenge'}: self._job_result=self._navigate(generation)
+            elif name=='navigate-route': self._job_result=self._navigate_route(generation)
+            else:
+                self._job_result=self._learn(generation,name in {'recover','adaptation-challenge'})
+                if name=='recover': self._change_recovered=True
             self.safety.assert_current(generation)
             self.safety.active=False; self.safety.latched=True
             self.actuator.stop(); self.writer.flush()
         except Exception as exc:
             self._job_error=str(exc)
             if generation==self.safety.generation: self._stop(str(exc),fault=True)
-            if name=='navigate':
+            if name in {'navigate','navigate-route','adaptation-challenge'}:
                 d=None if self.pose is None else math.hypot(self.target[0]-self.pose.x_m,self.target[1]-self.pose.y_m)
                 self._job_result={'success':False,'final_distance_m':d,'actions':self.safety.actions,'reason':str(exc)}
                 try: self._event('navigation_result',self._job_result)
@@ -319,17 +502,59 @@ class Runtime:
         if name=='heartbeat': return {'ok':self.safety.heartbeat(payload.get('owner_id'))}
         with self.lock:
             if self.closed: raise ValueError('runtime closed')
-            if name in {'start-calibration','recover','navigate'}:
+            if name=='inject-mutation':
+                allowed={'reverse_left','reverse_right','reverse_both','swap','weaken_left','random_mashup'}
+                mutation=payload.get('mapping')
+                if mutation not in allowed: raise ValueError('unknown mutation')
+                if not self.config.live_mutation_enabled: raise ValueError('live mutation is disabled for this configuration')
+                if not self.busy or self.state not in {'NAVIGATING','RECOVERING'}: raise ValueError('mutation requires active navigation')
+                if payload.get('owner_id')!=self.safety.owner: raise ValueError('active operator owner required')
+                change_id=uuid.uuid4().hex[:12]
+                self._pending_mutations.append((mutation,change_id))
+                return {'ok':True,'change_id':change_id,'queued':True}
+            if name=='adaptation-challenge':
                 if self.busy: raise ValueError('another episode is active')
                 if self.config.mode=='hardware' and not self._hardware_connected: raise ValueError('connect hardware explicitly first')
+                if not self.config.live_mutation_enabled: raise ValueError('live mutation is disabled for this configuration')
+                if not self.model_ready or self.target is None: raise ValueError('validated model and target required')
+                self._observe()
+                if math.hypot(self.target[0]-self.pose.x_m,self.target[1]-self.pose.y_m)<=self.config.goal_contact_radius_m:
+                    raise ValueError('choose a target outside the robot footprint')
+                self._stop('adaptation challenge mutation')
+                self.change_detector.reset(); self.change_detection=self.change_detector.status().to_dict()
+                self.change_detected=False; self._change_recovered=False; self.body_change_signal=None
+                self.actuator.mutate(payload.get('mapping') or 'random_mashup')
+                self._drain_audit()
+                generation=self.safety.start(payload.get('owner_id'),self.now)
+                try: self._check(generation)
+                except Exception:
+                    self.safety.stop('start safety gate rejected'); raise
+                self.busy=True; self.stop_reason=None; self._cancel.clear()
+                self._job_error=None; self._monitor_error=None; self._job_result=None
+                self._job=threading.Thread(target=self._run_job,args=(name,generation),daemon=True,name='darwin-challenge')
+                self._job.start()
+                return {'ok':True,'job':name,'generation':generation,'mutation':'hidden'}
+            if name in {'start-calibration','recover','navigate','navigate-route'}:
+                if self.busy: raise ValueError('another episode is active')
+                self._pending_mutations=[]
+                if name=='start-calibration':
+                    self.target=None; self.route=[]; self.route_index=None
+                if self.config.mode=='hardware' and not self._hardware_connected: raise ValueError('connect hardware explicitly first')
                 if name=='navigate' and (not self.model_ready or self.target is None): raise ValueError('validated model and target required')
+                if name=='navigate-route' and (not self.model_ready or not self.route): raise ValueError('validated model and route required')
                 if name=='recover' and self.frozen_model is None: raise ValueError('scramble a trained model first')
                 self._observe()
                 gen=self.safety.start(payload.get('owner_id'),self.now)
-                try: self._check(gen,exploration=name!='navigate')
+                try: self._check(gen,exploration=name not in {'navigate','navigate-route'},
+                    allow_boundary_recovery=name in {'navigate','navigate-route'} and self.model_ready)
                 except Exception:
                     self.safety.stop('start safety gate rejected'); raise
-                self.busy=True; self.stop_reason=None; self._cancel.clear(); self._job_error=None; self._job_result=None
+                if name in {'navigate','navigate-route'}:
+                    self.change_detector.reset(); self.change_detection=self.change_detector.status().to_dict(); self.change_detected=False
+                    self._change_recovered=False; self.body_change_signal=None
+                    self.boundary_recovery_active=False
+                self.busy=True; self.stop_reason=None; self._cancel.clear()
+                self._job_error=None; self._monitor_error=None; self._job_result=None
                 self._job=threading.Thread(target=self._run_job,args=(name,gen),daemon=True,name='darwin-episode')
                 self._event('episode_started',{'operation':name,'owner_id':self.safety.owner})
                 self._job.start()
@@ -340,7 +565,23 @@ class Runtime:
                 x,y=map(float,target)
                 l,r,b,t=self.config.safe_bounds
                 if not math.isfinite(x+y) or not l<=x<=r or not b<=y<=t: raise ValueError('target outside safe arena')
-                self.target=(x,y); self._event('target',{'target':self.target}); return {'ok':True,'target':self.target}
+                self.target=(x,y); self.route=[]; self.route_index=None
+                self._event('target',{'target':self.target}); return {'ok':True,'target':self.target}
+            if name=='route':
+                if self.busy: raise ValueError('stop before changing route')
+                raw=payload.get('points')
+                if not isinstance(raw,list) or not 2<=len(raw)<=16: raise ValueError('route requires 2 to 16 waypoints')
+                left,right,bottom,top=self.config.safe_bounds; route=[]
+                for item in raw:
+                    if isinstance(item,dict): values=(item.get('x_m'),item.get('y_m'))
+                    elif isinstance(item,(list,tuple)) and len(item)==2: values=item
+                    else: raise ValueError('route waypoint must contain x_m and y_m')
+                    x,y=map(float,values)
+                    if not math.isfinite(x+y) or not left<=x<=right or not bottom<=y<=top:
+                        raise ValueError('route waypoint outside safe arena')
+                    route.append({'x_m':x,'y_m':y})
+                self.route=route; self.route_index=0; self.target=(route[0]['x_m'],route[0]['y_m'])
+                self._event('route',{'points':route}); return {'ok':True,'route':route}
             if name in {'scramble','reset-model','reset','calibration','connect','recenter'} and self.busy:
                 raise ValueError('stop and wait for active pulse before changing state')
             if name=='scramble':
@@ -350,13 +591,14 @@ class Runtime:
                 self.actuator.scramble(payload.get('mapping'))
                 self._drain_audit()
                 self.model_ready=False; self.samples=[]; self.heldout=[]; self.latest_residual=None
+                self.change_detector.reset(); self.change_detection=self.change_detector.status().to_dict(); self.change_detected=False; self.body_change_signal=None
                 self.recovery_phase='scrambled; recover with fresh observations'
                 self._event('scramble',{'model_frozen':self.frozen_model.model_id})
                 return {'ok':True}
             if name in {'reset-model','reset'}:
                 from darwin.learning.model import MotionModel
                 self._stop('model reset'); self.model=MotionModel(ridge_lambda=self.config.ridge_lambda)
-                self.model_ready=False; self.frozen_model=None; self.samples=[]; self.heldout=[]; self.metrics={}; self.latest_residual=None
+                self.model_ready=False; self.frozen_model=None; self.samples=[]; self.heldout=[]; self.metrics={}; self.latest_residual=None; self.body_change_signal=None
                 self.recovery_phase='initial calibration required'; self._event('model_reset'); return {'ok':True}
             if name=='recenter':
                 if not self.env: raise ValueError('hardware must be manually repositioned')
@@ -381,7 +623,7 @@ class Runtime:
                 if width!=self.config.arena_width_m or height!=self.config.arena_height_m:
                     raise ValueError('arena dimensions must match config; restart with measured config')
                 self.calibration=Calibration.from_corners(points,width,height,(self.config.camera_width,self.config.camera_height),camera_id=payload.get('camera_id',self.config.camera_backend),heading_offset_rad=float(payload.get('heading_offset_rad',0)),marker_height_m=float(payload.get('marker_height_m',0)))
-                self.model_ready=False; self.frozen_model=None; self.samples=[]; self.heldout=[]; self.metrics={}; self.latest_residual=None; self._stop('calibration changed; relearn required')
+                self.model_ready=False; self.frozen_model=None; self.samples=[]; self.heldout=[]; self.metrics={}; self.latest_residual=None; self.body_change_signal=None; self._stop('calibration changed; relearn required')
                 self.calibration.save(ROOT/'data'/('calibration-'+self.calibration.calibration_id+'.json'))
                 self._observe(log=True); self._event('calibration',self.calibration.to_dict()); return {'ok':True,'calibration':self.calibration.to_dict()}
             if name=='connect':
@@ -428,14 +670,24 @@ class Runtime:
         age=max(0,(self.now-self.pose.observed_at)*1000) if self.pose else None
         if self.faults.get('stale_frames'): age=max(age or 0,self.config.max_frame_age_ms+1)
         return {'mode':self.config.mode,'state':self.state,'stop_reason':self.stop_reason,'run_id':self.run_id,
-            'pose':pose,'target':self.target,'trail':self.trail[-500:],'predicted_motion':self.predicted_motion,
+            'pose':pose,'target':self.target,'route':self.route,'route_index':self.route_index,
+            'trail':self.trail[-500:],'predicted_motion':self.predicted_motion,
             'transport_health':'healthy' if self._healthy() else 'disconnected','frame_age_ms':age,
             'ack_age_ms':max(0,(self.now-self.last_receipt.ack_at)*1000) if self.last_receipt and self.last_receipt.ack_at is not None else None,
             'valid_sample_count':len(self.samples),'rejected_sample_count':len(self.rejected),'heldout_sample_count':len(self.heldout),
             'model_id':self.model.model_id if self.model_ready else None,'validation_metrics':self.metrics,
             'recovery_phase':self.recovery_phase,'busy':self.busy,'owner_id':self.safety.owner if self.safety.active else None,
             'calibration':self.calibration.to_dict() if self.calibration else None,'events':self.events[-25:],
-            'latest_residual':self.latest_residual,'faults':dict(self.faults),'model_ready':self.model_ready,
+            'latest_residual':self.latest_residual,'change_detection':{**self.change_detection,'detected':self.change_detected},
+            'body_change_signal':self.body_change_signal,
+            'adaptation_complete':self._change_recovered,
+            'model_uncertainty':self.model_uncertainty,
+            'frozen_predicted_motion':self.frozen_predicted_motion,
+            'adapted_predicted_motion':self.adapted_predicted_motion,
+            'model_memory':{'count':len(self.model_memory.entries),'matched_model_id':self.matched_model_id},
+            'live_mutation_enabled':self.config.live_mutation_enabled,
+            'boundary_recovery_active':self.boundary_recovery_active,
+            'obstacles':self.obstacles,'faults':dict(self.faults),'model_ready':self.model_ready,
             'observation_mode':self.config.observation if self.env else self.config.camera_backend,
             'actions':self.safety.actions,'error':self._job_error or self._monitor_error}
 

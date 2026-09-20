@@ -5,7 +5,7 @@ from darwin.types import RequestedAction
 from darwin.simulation.environment import SimulationEnvironment
 from darwin.simulation.plant import hidden_mapping
 
-@pytest.mark.parametrize('name',['identity','swap','reverse_one','reverse_both','unequal_gains'])
+@pytest.mark.parametrize('name',['identity','swap','reverse_left','reverse_right','reverse_both','unequal_gains'])
 def test_full_rank_maps_and_zero(name):
     _,matrix=hidden_mapping(name)
     assert np.linalg.matrix_rank(matrix)==2
@@ -17,9 +17,30 @@ def test_full_rank_maps_and_zero(name):
     assert env.truth_for_renderer()==before
 
 def test_expected_mapping_semantics():
-    for name,expected in [('identity',[.5,-.2]),('swap',[-.2,.5]),('reverse_one',[-.5,-.2]),('reverse_both',[-.5,.2]),('unequal_gains',[.13,.425])]:
+    for name,expected in [('identity',[.5,-.2]),('swap',[-.2,.5]),('reverse_left',[-.5,-.2]),('reverse_right',[.5,.2]),('reverse_both',[-.5,.2]),('unequal_gains',[.13,.425])]:
         _,matrix=hidden_mapping(name)
         assert matrix@np.array([.5,-.2])==pytest.approx(expected)
+
+
+def test_legacy_reverse_one_aliases_reverse_left():
+    _, legacy = hidden_mapping('reverse_one')
+    _, explicit = hidden_mapping('reverse_left')
+    assert np.array_equal(legacy, explicit)
+
+def test_shared_weak_wheel_name_is_supported():
+    name, mapping = hidden_mapping('weaken_left')
+    assert name == 'unequal_gains'
+    assert mapping.shape == (2, 2)
+
+def test_random_mashup_is_seeded_full_rank_and_private():
+    first=SimulationEnvironment(Config(seed=91)); second=SimulationEnvironment(Config(seed=91))
+    first.mutate('random_mashup'); second.mutate('random_mashup')
+    action=RequestedAction('probe',(.6,-.4),120)
+    first.execute(action); second.execute(action)
+    assert first.truth_for_renderer()==second.truth_for_renderer()
+    assert first.audit_records[-1]['map_name']=='random_mashup'
+    recipe=first.audit_records[-2]['recipe']
+    assert len(recipe)>=2
 
 def test_faults_and_distinct_timestamps():
     env=SimulationEnvironment(Config())

@@ -39,7 +39,7 @@ def test_pixels_to_learning_to_navigation(seed,mapping):
     policy=Policy(c); target=(.67,.65)
     for _ in range(c.max_episode_actions):
         pose=observe()
-        if math.hypot(pose.x_m-target[0],pose.y_m-target[1])<=c.goal_radius_m: break
+        if math.hypot(pose.x_m-target[0],pose.y_m-target[1])<=c.goal_contact_radius_m: break
         action=policy.choose(pose,target,adapted)
         assert action is not None
         env.execute(action)

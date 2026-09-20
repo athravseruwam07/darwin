@@ -3,7 +3,7 @@ import math
 import uuid
 import numpy as np
 from darwin.types import Pose, ActuationReceipt
-from .plant import DifferentialDrivePlant, hidden_mapping
+from .plant import DifferentialDrivePlant, hidden_mapping, mutation_mapping
 
 class SimulationEnvironment:
     def __init__(self, config):
@@ -77,12 +77,21 @@ class SimulationEnvironment:
 
     def scramble(self, name=None):
         self.stop()
-        names = ['swap','reverse_one','reverse_both','unequal_gains','identity']
+        names = ['swap','reverse_left','reverse_right','reverse_both','unequal_gains','identity']
         if name is None: name = names[self._change%len(names)]
         self._map_name,self._mapping = hidden_mapping(name)
         self._change += 1
         change_id = uuid.uuid4().hex
         self.audit_records.append({'kind':'scramble','at':self.now,'map_name':self._map_name,'change_id':change_id,'mode':'simulation'})
+        return change_id
+
+    def mutate(self, name):
+        self.stop()
+        self._map_name,self._mapping,recipe = mutation_mapping(name,self._rng)
+        self._change += 1
+        change_id=uuid.uuid4().hex
+        self.audit_records.append({'kind':'mutation','at':self.now,'map_name':self._map_name,
+                                   'change_id':change_id,'recipe':recipe,'mode':'simulation'})
         return change_id
 
     def reset_pose(self, x=.5,y=.5,theta=0):

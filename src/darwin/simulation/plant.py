@@ -4,14 +4,36 @@ import numpy as np
 
 MAPS = {
     'identity':np.eye(2), 'swap':np.array([[0.,1.],[1.,0.]]),
-    'reverse_one':np.diag([-1.,1.]), 'reverse_both':-np.eye(2),
+    'reverse_left':np.diag([-1.,1.]), 'reverse_right':np.diag([1.,-1.]),
+    'reverse_both':-np.eye(2),
     'unequal_gains':np.array([[0.,-.65],[.85,0.]])}
 
+MUTATIONS = {
+    'reverse_left':np.diag([-1.,1.]), 'reverse_right':np.diag([1.,-1.]),
+    'reverse_both':-np.eye(2), 'swap':np.array([[0.,1.],[1.,0.]]),
+    'weaken_left':np.diag([.7,1.])}
+
 def hidden_mapping(name):
-    aliases = {'reverse-one':'reverse_one','reverse-both':'reverse_both','gains':'unequal_gains','unequal-gains':'unequal_gains'}
+    aliases = {'reverse_one':'reverse_left','reverse-one':'reverse_left','reverse-left':'reverse_left',
+               'reverse-right':'reverse_right','reverse-both':'reverse_both',
+               'gains':'unequal_gains','unequal-gains':'unequal_gains',
+               'unequal':'unequal_gains','weaken_left':'unequal_gains'}
     name = aliases.get(name,name)
     if name not in MAPS: raise ValueError('unknown scramble')
     return name,MAPS[name].copy()
+
+def mutation_mapping(name, rng):
+    if name in MUTATIONS: return name,MUTATIONS[name].copy(),[name]
+    if name != 'random_mashup': raise ValueError('unknown mutation')
+    keys=tuple(MUTATIONS)
+    for _ in range(32):
+        count=int(rng.integers(2,len(keys)+1)); chosen=rng.choice(keys,size=count,replace=False)
+        matrix=np.eye(2)
+        for key in chosen: matrix=MUTATIONS[str(key)]@matrix
+        if (np.isfinite(matrix).all() and np.linalg.matrix_rank(matrix)==2 and
+                np.max(np.abs(matrix))<=1 and np.linalg.norm(matrix-np.eye(2))>.1):
+            return 'random_mashup',matrix,[str(key) for key in chosen]
+    raise RuntimeError('could not generate safe nonidentity mutation')
 
 class DifferentialDrivePlant:
     def __init__(self, seed, variant='linear'):

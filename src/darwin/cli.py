@@ -51,10 +51,12 @@ def main(argv=None):
     try:
         if a.command=='doctor':
             import cv2,numpy
+            from serial.tools import list_ports
             info={'python':sys.version,'executable':sys.executable,'architecture':platform.machine(),'platform':platform.platform(),
                 'numpy':numpy.__version__,'opencv':cv2.__version__,'aruco':hasattr(cv2,'aruco'),'default_mode':'simulation',
                 'optional_depthai':importlib.metadata.version('depthai') if importlib.util.find_spec('depthai') else 'not installed; simulation unaffected',
-                'device_access':'none; no serial or camera opened'}
+                'serial_ports':[{'device':port.device,'description':port.description,'vid':port.vid,'pid':port.pid} for port in list_ports.comports()],
+                'device_access':'serial ports enumerated read-only; no serial or camera opened'}
             dump(info)
         elif a.command=='marker':
             from darwin.vision.markers import generate_marker

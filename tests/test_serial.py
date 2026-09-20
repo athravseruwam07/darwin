@@ -61,6 +61,20 @@ def test_zero_every_hardware_map(transport):
         a.scramble(name); r=a.execute(RequestedAction(name,(0.,0.),20))
         assert r.accepted and a.audit_records[-1]['physical_pwm']==[0,0]
 
+def test_explicit_left_and_right_direction_reversal(transport):
+    actuator=HardwareActuator(transport,replace(Config(),settle_ms=0,pwm_scale=80))
+    for name,expected in [('reverse_left',[-80,40]),('reverse_right',[80,-40]),('reverse_both',[-80,-40])]:
+        actuator.scramble(name)
+        result=actuator.execute(RequestedAction(name,(1.,.5),20))
+        assert result.accepted
+        assert actuator.audit_records[-1]['physical_pwm']==expected
+
+def test_hardware_scramble_accepts_shared_weak_wheel_name(transport):
+    actuator=HardwareActuator(transport,replace(Config(),settle_ms=0,pwm_scale=90,max_pwm=90))
+    actuator.scramble('weaken_left')
+    actuator.execute(RequestedAction('weak',(1.,1.),20))
+    assert actuator.audit_records[-1]['physical_pwm']==[63,90]
+
 def test_reordered_sequences_and_stop_disarms():
     f=FakeFirmware(); f.line('ARM'); f.line('M 10 30 30 100')
     assert f.line('M 9 30 30 100')=='ERR DISARMED'

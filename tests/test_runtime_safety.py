@@ -3,6 +3,7 @@ import time
 import pytest
 from darwin.config import Config
 from darwin.runtime import Runtime
+from darwin.safety import SafetyViolation
 
 
 def make(tmp_path,**config):
@@ -132,3 +133,58 @@ def test_no_motion_cannot_unlock_navigation(tmp_path):
         with pytest.raises(RuntimeError,match='insufficient predictable motion'):r.wait()
         assert not r.model_ready and r.state=='FAULT'
     finally:r.close()
+
+
+def test_successful_episode_clears_stale_monitor_error(tmp_path):
+    r=make(tmp_path)
+    try:
+        r._monitor_error='old tracking fault'
+        r.realtime=False
+        start(r)
+        r.wait(owner='operator-test')
+        assert r.snapshot()['error'] is None
+    finally:
+        r.close()
+
+
+def test_new_calibration_cycle_clears_stale_target_and_route(tmp_path):
+    r=make(tmp_path)
+    try:
+        r.realtime=False; start(r); r.wait(owner='operator-test')
+        r.command('target',{'target':[.65,.65]})
+        r.route=[{'x_m':.55,'y_m':.55},{'x_m':.65,'y_m':.65}]
+        start(r)
+        assert r.target is None and r.route==[] and r.route_index is None
+        r.wait(owner='operator-test')
+    finally:
+        r.close()
+
+
+@pytest.mark.parametrize('start_pose',[(.14,.5,0),(.86,.5,3.14),(.5,.14,1.57),(.5,.86,-1.57)])
+def test_navigation_returns_from_green_buffer_before_resuming_target(tmp_path,start_pose):
+    r=make(tmp_path,boundary_margin_m=.10)
+    try:
+        r.realtime=False; start(r); r.wait(owner='operator-test')
+        r.env.reset_pose(*start_pose)
+        r.command('target',{'target':[.5,.5]})
+        start(r,'navigate'); result=r.wait(owner='operator-test')
+        assert result['success']
+        assert any(event['kind']=='boundary_recovery_started' for event in r.events)
+        assert any(event['kind']=='boundary_recovered' for event in r.events)
+        assert r.pose.x_m >= r.config.safe_bounds[0]
+    finally:
+        r.close()
+
+
+def test_navigation_near_red_boundary_stops_without_another_motor_action(tmp_path):
+    r=make(tmp_path,boundary_margin_m=.10)
+    try:
+        r.realtime=False; start(r); r.wait(owner='operator-test')
+        r.env.reset_pose(.10,.5,0)
+        r.command('target',{'target':[.5,.5]})
+        count=motion_count(r)
+        with pytest.raises(SafetyViolation,match='insufficient red boundary reserve'):
+            start(r,'navigate')
+        assert motion_count(r)==count and not r.safety.active
+    finally:
+        r.close()

@@ -53,14 +53,23 @@ class Config:
     desired_max_speed_mps: float = .08
     desired_max_yaw_radps: float = .7
     plant_variant: str = "linear"
+    mismatch_threshold: float = .25
+    mismatch_required_exceedances: int = 3
+    recovery_trials: int = 12
+    recovery_validation_trials: int = 8
+    model_memory_match_distance: float = .15
+    obstacle_detection_enabled: bool = False
+    live_mutation_enabled: bool | None = None
 
     def __post_init__(self):
+        if self.live_mutation_enabled is None:
+            object.__setattr__(self,'live_mutation_enabled',self.mode=='simulation')
         for k, v in asdict(self).items():
             if isinstance(v, float) and not math.isfinite(v):
                 raise ValueError(f"{k} must be finite")
-        for key in ('port','seed','pulse_ms','settle_ms','initial_trials','validation_trials','goal_dwell_ms','max_episode_actions','max_frame_age_ms','operator_lease_ms','pwm_scale','max_pwm','fallback_ttl_ms','ack_timeout_ms','baudrate','camera_width','camera_height','camera_fps','marker_id'):
+        for key in ('port','seed','pulse_ms','settle_ms','initial_trials','validation_trials','goal_dwell_ms','max_episode_actions','max_frame_age_ms','operator_lease_ms','pwm_scale','max_pwm','fallback_ttl_ms','ack_timeout_ms','baudrate','camera_width','camera_height','camera_fps','marker_id','mismatch_required_exceedances','recovery_trials','recovery_validation_trials'):
             if type(getattr(self,key)) is not int: raise ValueError(f'{key} must be an integer')
-        if type(self.hardware_confirmed) is not bool: raise ValueError('hardware_confirmed must be boolean')
+        if type(self.hardware_confirmed) is not bool or type(self.obstacle_detection_enabled) is not bool or type(self.live_mutation_enabled) is not bool: raise ValueError('hardware, obstacle, and mutation flags must be boolean')
         if self.measured_probe_bound_m is not None and (not math.isfinite(self.measured_probe_bound_m) or self.measured_probe_bound_m <= 0): raise ValueError('invalid measured probe travel bound')
         if min(self.stationary_position_tolerance_m,self.stationary_yaw_tolerance_rad,self.stationary_window_s)<=0: raise ValueError('invalid stationary observation thresholds')
         if self.camera_backend not in {'simulated','oak','webcam','video'}: raise ValueError('unknown camera backend')
@@ -75,7 +84,9 @@ class Config:
         if self.settle_ms < 0 or self.ridge_lambda < 0: raise ValueError("negative settle/ridge")
         if min(self.robot_radius_m, self.boundary_margin_m, self.goal_radius_m) <= 0: raise ValueError("invalid geometry")
         if min(self.arena_width_m, self.arena_height_m) <= 2*(self.robot_radius_m+self.boundary_margin_m)+.1: raise ValueError("arena has no safe interior")
-        if min(self.initial_trials,self.validation_trials) < 6: raise ValueError("insufficient independent trials")
+        if min(self.initial_trials,self.validation_trials,self.recovery_trials,self.recovery_validation_trials) < 6: raise ValueError("insufficient independent trials")
+        if self.recovery_validation_trials < 8: raise ValueError("recovery validation needs straight and turn coverage")
+        if self.mismatch_required_exceedances < 1 or self.mismatch_threshold <= 0 or self.model_memory_match_distance < 0: raise ValueError('invalid adaptation thresholds')
         if min(self.max_episode_actions,self.max_episode_seconds,self.max_frame_age_ms,self.operator_lease_ms,self.ack_timeout_ms,self.camera_fps) <= 0: raise ValueError("invalid limits")
         if not 0 <= self.marker_id < 50: raise ValueError("marker ID outside dictionary")
         if not all(math.isfinite(x) and -1 <= x <= 1 for x in self.candidate_levels) or 0 not in self.candidate_levels: raise ValueError("invalid candidate levels")
@@ -91,7 +102,25 @@ class Config:
         m = self.robot_radius_m+self.boundary_margin_m
         return (m, self.arena_width_m-m, m, self.arena_height_m-m)
 
-    def public(self): return asdict(self)
+    @property
+    def physical_bounds(self):
+        """Legal robot-center bounds when its footprint only touches red."""
+        m = self.robot_radius_m
+        return (m, self.arena_width_m-m, m, self.arena_height_m-m)
+
+    @property
+    def goal_contact_radius_m(self):
+        """Center-to-target distance where the robot footprint touches the target."""
+        return max(self.robot_radius_m,self.goal_radius_m)
+
+    @property
+    def boundary_recovery_bounds(self):
+        """Physical bounds with one measured pulse of emergency reserve."""
+        reserve = self.measured_probe_bound_m or .04
+        m = self.robot_radius_m+reserve
+        return (m, self.arena_width_m-m, m, self.arena_height_m-m)
+
+    def public(self): return {**asdict(self),'goal_contact_radius_m':self.goal_contact_radius_m}
 
 def load_config(path=None, **overrides):
     data = yaml.safe_load(Path(path).read_text()) if path else {}

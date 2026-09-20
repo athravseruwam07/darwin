@@ -11,7 +11,7 @@ from darwin.control.policy import Policy
 
 TASKS=[{'target':[.67,.65],'heading':0.}, {'target':[.34,.65],'heading':1.2},
        {'target':[.65,.34],'heading':-1.3}, {'target':[.35,.35],'heading':2.7}]
-MAPS=['swap','reverse_one','reverse_both','unequal_gains']
+MAPS=['swap','reverse_left','reverse_right','reverse_both','unequal_gains']
 
 def job(runtime,name):
     runtime.command(name,{'owner_id':'cli'})
@@ -39,13 +39,13 @@ def frozen_trial(runtime,task,budget=100):
             runtime.safety.heartbeat('cli')
             pose=runtime._observe()
             distance=math.hypot(task['target'][0]-pose.x_m,task['target'][1]-pose.y_m)
-            if distance<=runtime.config.goal_radius_m:
+            if distance<=runtime.config.goal_contact_radius_m:
                 dwelling=True
                 for _ in range(math.ceil(runtime.config.goal_dwell_ms/50)):
                     runtime.env.advance(.05); runtime.safety.heartbeat('cli')
                     pose=runtime._observe(log=True); runtime._check(gen,exploration=True)
                     distance=math.hypot(task['target'][0]-pose.x_m,task['target'][1]-pose.y_m)
-                    if distance>runtime.config.goal_radius_m: dwelling=False; break
+                    if distance>runtime.config.goal_contact_radius_m: dwelling=False; break
                 if dwelling:
                     result={'success':True,'actions':count,'final_distance_m':distance}; break
                 continue
@@ -63,12 +63,12 @@ def frozen_trial(runtime,task,budget=100):
     runtime._event('frozen_navigation_result',result)
     return result
 
-def run_case(seed=42,mapping='reverse_one',variant='linear',observation='vision',tasks=None,run_root=None):
+def run_case(seed=42,mapping='reverse_left',variant='linear',observation='vision',tasks=None,run_root=None):
     config=Config(seed=seed,plant_variant=variant,observation=observation)
     runtime=Runtime(config,realtime=False,run_root=run_root)
     result={'seed':seed,'mapping':mapping,'variant':variant,'observation':observation,
             'run_id':runtime.run_id,'run_path':str(runtime.writer.path),
-            'thresholds':{'goal_radius_m':config.goal_radius_m,'max_actions':config.max_episode_actions,
+            'thresholds':{'goal_radius_m':config.goal_radius_m,'goal_contact_radius_m':config.goal_contact_radius_m,'max_actions':config.max_episode_actions,
             'max_seconds':config.max_episode_seconds,'dwell_ms':config.goal_dwell_ms,'safe_bounds':config.safe_bounds,
             'success_fraction_target':.8,'normalized_prediction_reduction_target':.8},'interventions':[],
             'before_navigation':[],'frozen_navigation':[],'adapted_navigation':[]}
@@ -109,6 +109,7 @@ def run_case(seed=42,mapping='reverse_one',variant='linear',observation='vision'
 
 def write_report(cases,output):
     output=Path(output); output.mkdir(parents=True,exist_ok=True)
+    contact_radius=cases[0]['thresholds'].get('goal_contact_radius_m',cases[0]['thresholds']['goal_radius_m']) if cases else 0.
     summary={'mode':'SIMULATION','cases':len(cases),'seeds':sorted({c['seed'] for c in cases}),
              'variants':sorted({c['variant'] for c in cases}),'mappings':sorted({c['mapping'] for c in cases}),
              'failures':[{'run_id':c['run_id'],'error':c['error']} for c in cases if c.get('error')],
@@ -123,7 +124,7 @@ def write_report(cases,output):
     summary['passed']=not summary['failures'] and summary['navigation']['before_navigation']['success_fraction']>=.8 and summary['navigation']['adapted_navigation']['success_fraction']>=.8 and bool(reductions) and min(reductions)>=.8
     (output/'results.json').write_text(json.dumps(summary,indent=2,allow_nan=False))
     lines=['# Darwin measured simulation evidence','',f"Cases: {len(cases)}; seeds: {summary['seeds']}; variants: {summary['variants']}; mappings: {summary['mappings']}.",'',
-           'Every task uses a 0.06 m goal radius, 500 ms dwell, 100 actions / 45 synthetic seconds. Every explicit recenter is recorded as an intervention between trials. Frozen navigation uses conservative unknown-response boundary checks. All failures stay in denominators.','',
+           f'Every task succeeds when the {contact_radius:.2f} m robot footprint reaches the point target, with a 500 ms dwell and 100 actions / 45 synthetic seconds. Every explicit recenter is recorded as an intervention between trials. Frozen navigation uses conservative unknown-response boundary checks. All failures stay in denominators.','',
            '| Phase | Success / trials | Fraction |','|---|---:|---:|']
     for phase,stats in summary['navigation'].items(): lines.append(f"| {phase} | {stats['successes']} / {stats['trials']} | {stats['success_fraction']:.1%} |")
     lines.extend(['',f"Minimum adapted vs frozen normalized prediction error reduction: {summary['prediction_reduction_min']:.2%}" if reductions else 'No prediction results.',
