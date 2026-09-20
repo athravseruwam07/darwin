@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
 STATIC = Path(__file__).with_name('static')
-COMMANDS = {'connect','calibration','target','start-calibration','navigate','stop','scramble','recover','reset-model','export','heartbeat','fault','reset-pose','recenter'}
+COMMANDS = {'connect','calibration','target','route','start-calibration','navigate','navigate-route','stop','scramble','recover','adaptation-challenge','inject-mutation','reset-model','export','heartbeat','fault','reset-pose','recenter'}
 
 async def invoke(method, *args):
     if inspect.iscoroutinefunction(method): return await method(*args)
@@ -32,6 +32,8 @@ def create_app(runtime):
 
     @app.get('/')
     async def index(): return FileResponse(STATIC/'index.html')
+    @app.get('/lab')
+    async def lab(): return FileResponse(STATIC/'index.html')
     @app.get('/api/status')
     async def status(): return await invoke(runtime.snapshot)
     @app.get('/api/config')

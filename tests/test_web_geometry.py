@@ -7,7 +7,7 @@ import pytest
 
 @pytest.mark.skipif(not shutil.which('node'),reason='Node optional: browser exercises same geometry')
 def test_browser_homography_and_css_letterbox_click_mapping():
-    javascript=(Path(__file__).resolve().parents[1]/'src/darwin/web/static/app.js').read_text().split('window.DarwinGeometry=')[0]
+    javascript=(Path(__file__).resolve().parents[1]/'src/darwin/web/static/app.js').read_text(encoding='utf-8').split('window.DarwinGeometry=')[0]
     assertions='''
 const assert=require('assert');
 const corners=[[40,20],[570,35],[600,440],[20,410]], world=[[0,1],[1,1],[1,0],[0,0]];
@@ -24,6 +24,17 @@ assert(!residualText({v_mps:NaN,omega_radps:Infinity}).includes('NaN'));
 assert.strictEqual(poseText({valid:false,x_m:0,y_m:0,theta_rad:0,invalid_reason:'marker not detected'}),'Tracking unavailable · marker not detected');
 assert.strictEqual(poseText({valid:true,x_m:.5,y_m:.6,theta_rad:.1}),'0.500, 0.600 m · 0.10 rad');
 assert.strictEqual(poseText(null),'Tracking unavailable');
+const base={mode:'hardware',state:'READY',busy:false,model_id:'model',model_ready:true,pose:{valid:true,x_m:.5,y_m:.5},transport_health:'healthy',valid_sample_count:24};
+let controls=controlAvailability({...base,target:null},{goal_radius_m:.06},{hasGeometry:true,hasFrame:true,calibrating:false,requestBusy:false});
+assert.strictEqual(controls.navigate.enabled,false);assert.strictEqual(controls.navigate.reason,'Choose a target first');
+controls=controlAvailability({...base,target:[.575,.5]},{goal_radius_m:.06,goal_contact_radius_m:.08},{hasGeometry:true,hasFrame:true,calibrating:false,requestBusy:false});
+assert.strictEqual(controls.navigate.enabled,false);assert(controls.navigate.reason.includes('reached'));
+controls=controlAvailability({...base,target:[.8,.8]},{goal_radius_m:.06,goal_contact_radius_m:.08},{hasGeometry:true,hasFrame:true,calibrating:false,requestBusy:false});
+assert.strictEqual(controls.navigate.enabled,true);assert.strictEqual(controls.stop.enabled,false);
+controls=controlAvailability({...base,busy:true,target:[.8,.8]},{goal_radius_m:.06,goal_contact_radius_m:.08},{hasGeometry:true,hasFrame:true,calibrating:false,requestBusy:false});
+assert.strictEqual(controls.navigate.enabled,false);assert.strictEqual(controls.stop.enabled,true);
+controls=controlAvailability({...base,model_id:null,model_ready:false,target:null},{goal_radius_m:.06},{hasGeometry:true,hasFrame:true,calibrating:false,requestBusy:false});
+assert.strictEqual(controls.selectTarget.enabled,false);assert.strictEqual(controls.resetModel.enabled,true);
 console.log('coordinate geometry and measurement formatting verified');
 '''
     result=subprocess.run(['node','-e',javascript+assertions],capture_output=True,text=True)

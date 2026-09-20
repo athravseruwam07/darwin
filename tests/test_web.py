@@ -22,7 +22,54 @@ def test_all_controls_reach_same_runtime():
     assert client.get('/api/runs').json()==[{'run_id':'sample'}]
     assert client.get('/api/frame').content==b'jpeg'
     assert 'DARWIN' in client.get('/').text
+    assert 'DARWIN' in client.get('/lab').text
     assert 'owner_id' in client.get('/static/app.js').text
+
+
+def test_dashboard_separates_drive_controls_from_lab_detail():
+    client=TestClient(create_app(Runtime()))
+    html=client.get('/').text
+    script=client.get('/static/app.js').text
+    for contract in ['operator-view','command-deck','mutation-toolbar','lab-view','href="/"','href="/lab"']:
+        assert contract in html
+    assert "location.pathname==='/lab'" in script
+    assert 'lab-page' in script
+
+
+def test_drive_to_lab_navigation_preserves_control_lease_without_stopping():
+    script=TestClient(create_app(Runtime())).get('/static/app.js').text
+    assert 'sessionStorage' in script
+    assert 'darwin-owner-id' in script
+    assert "sendBeacon('/api/stop'" not in script
+
+def test_dashboard_contains_adaptation_and_route_story():
+    client=TestClient(create_app(Runtime()))
+    assets=client.get('/').text+client.get('/static/app.js').text
+    for identifier in ['adaptation-story','mutation-buttons','draw-route','change-score','model-uncertainty']:
+        assert identifier in assets
+    for contract in ['change_detection','adaptation_complete','model_uncertainty','frozen_predicted_motion','adapted_predicted_motion',"act('route',{points:","act('navigate-route')","reverse_left","reverse_right","reverse_both","swap","random_mashup"]:
+        assert contract in assets
+
+def test_dashboard_has_live_navigation_mutation_and_runtime_narration():
+    assets=TestClient(create_app(Runtime())).get('/static/app.js').text
+    for contract in ['inject-mutation','Random Mashup','Swap Wheels','Reverse Left','Reverse Right','Reverse Both','Weaken Left','data-mutation','navigationActive','adaptation-narration','adaptation-timeline','aria-live="polite"']:
+        assert contract in assets
+    for runtime_signal in ["state.state==='NAVIGATING'",'model_mismatch','collecting fresh probes','FITTING','evaluation','navigation_result']:
+        assert runtime_signal in assets
+    assert 'mutation-mode' not in assets
+    for gate in ['state.owner_id&&state.owner_id!==owner','state.live_mutation_enabled!==false','config.live_mutation_enabled!==false','Live mutation is disabled by this runtime configuration',"document.querySelectorAll('[data-mutation]')"]:
+        assert gate in assets
+
+
+def test_drive_dashboard_surfaces_blind_body_change_signal():
+    client=TestClient(create_app(Runtime()))
+    html=client.get('/').text
+    script=client.get('/static/app.js').text
+    assets=html+script
+    for identifier in ['brain-signal','change-alert','change-detail','aria-live="polite"']:
+        assert identifier in assets
+    for contract in ['body_change_signal','Change detected','Watching predictions','New body learned','camera residual']:
+        assert contract in script
 
 def test_bad_commands_and_origin_refused():
     client=TestClient(create_app(Runtime()))
