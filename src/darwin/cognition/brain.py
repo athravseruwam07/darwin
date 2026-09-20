@@ -141,7 +141,7 @@ class Brain:
                 self._queue.task_done()
 
     def _enrich(self, thought, trigger, facts, recent, speakable):
-        if self.thought_writer is not None:
+        if self.thought_writer is not None and trigger.kind!='change_detected':
             text=None
             try: text=self.thought_writer.write(trigger,facts,recent)
             except Exception as exc:

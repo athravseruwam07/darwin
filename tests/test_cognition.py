@@ -54,6 +54,12 @@ def test_triggers_follow_sensed_transitions_not_operator_buttons():
     assert change.fallback=='Who scrambled my controls?'
 
 
+def test_routine_disarmed_status_does_not_create_chatter():
+    before=cognition_facts(BASE,None)
+    after=cognition_facts({**BASE,'state':'DISARMED','stop_reason':'connected disarmed'},None)
+    assert 'stopped' not in [trigger.kind for trigger in detect_triggers(before,after)]
+
+
 def test_operator_mutation_is_a_separate_channel_that_darwin_cannot_see():
     trigger=operator_trigger('inject-mutation',{'mapping':'reverse_both'})
     assert trigger.channel=='operator' and trigger.kind=='operator_mutation'
@@ -170,6 +176,18 @@ def test_brain_falls_back_when_the_model_invents_numbers():
     thought=brain.snapshot()['thoughts'][-1]
     assert thought['source']=='local'
     assert '11.4' not in thought['text']
+    brain.close()
+
+
+def test_detected_change_keeps_the_signature_line_verbatim():
+    class Writer:
+        def write(self,trigger,facts,recent): return 'Something changed.'
+    brain=Brain(enabled=True,min_interval_s=0,thought_writer=Writer())
+    brain.observe({**BASE,'state':'NAVIGATING','busy':True})
+    brain.observe({**BASE,'state':'NAVIGATING','busy':True,
+        'change_detection':{'score':.9,'threshold':.25,'evidence_count':4,'consecutive_count':3,'detected':True}})
+    brain.drain()
+    assert brain.snapshot()['thoughts'][-1]['text']=='Who scrambled my controls?'
     brain.close()
 
 

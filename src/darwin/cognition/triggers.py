@@ -106,7 +106,9 @@ def detect_triggers(before, after):
     if before is None: return [_boot(after)]
     out=[]
     change,previous=after['change'],before['change']
-    if after['stop_reason'] and after['stop_reason']!=before['stop_reason']:
+    routine_stops={'awaiting operator start','connected disarmed','operator stop'}
+    if (after['stop_reason'] and after['stop_reason']!=before['stop_reason'] and
+            after['stop_reason'].lower() not in routine_stops):
         out.append(Trigger('stopped','fault','darwin','Motion stopped',
             'I stopped before that got embarrassing.',
             _chips(('reason',after['stop_reason'])),priority=1))
