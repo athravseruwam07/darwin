@@ -37,7 +37,7 @@ Demo flow:
 5. Darwin notices repeated camera-measured prediction mismatch, stops goal-directed motion, actively selects recovery experiments, validates the adapted model against the frozen model, and resumes toward the original target. The live reasoning panel narrates those recorded states and events.
 6. **Full Adaptation Challenge** remains as a one-button convenience flow. **Draw Route** accepts two or more waypoints.
 
-The dashboard shows mismatch score, action-space uncertainty, frozen/adapted motion ghosts, measured held-out errors, obstacle overlays, route, state machine, and immutable event trail. These are runtime values—not scripted animation.
+The Arena dashboard shows mismatch score, action-space uncertainty, frozen/adapted motion ghosts, measured held-out errors, obstacle overlays, route, state machine, and immutable event trail. Open **Observatory** without reloading the runtime to inspect the learned 3D command-to-motion surface, camera observations, motor-influence graph, causal adaptation timeline, and before/frozen/adapted evidence. These are runtime values—not scripted animation or simulator truth.
 
 ## Hardware run on this computer
 

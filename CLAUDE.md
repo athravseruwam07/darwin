@@ -31,7 +31,7 @@ truth.
 
 - Git remote: `https://github.com/athravseruwam07/darwin.git`
 - Default branch: `main`
-- Latest pushed baseline before the major UI redesign: `01a792a`
+- Agent context was introduced in `1695e86`; always inspect local and remote `main` for newer work.
 - Verified on Windows 11 x64 with PowerShell and the repository-local `venv`.
 - Latest complete test run: **202 passed, 2 skipped, 0 failures**.
 - The dashboard normally uses <http://127.0.0.1:8770/>. Verify the listener and
@@ -91,13 +91,13 @@ the firmware watchdog must remain fail-closed.
 - Replay must be unmistakably labeled and read-only. Never present recorded data
   as live hardware.
 
-## Major UI redesign now requested
+## Darwin Observatory UI
 
-Build a projector-grade **Darwin Observatory** that makes the real
+The projector-grade **Darwin Observatory** is implemented to make the real
 learn -> navigate -> mutate -> detect -> experiment -> relearn -> validate ->
 resume loop understandable within seconds.
 
-The distinctive centerpiece should be a truthful 3D sensorimotor landscape:
+Its distinctive centerpiece is a truthful 3D sensorimotor landscape:
 
 - X: left-wheel command.
 - Y: right-wheel command.
@@ -107,17 +107,17 @@ The distinctive centerpiece should be a truthful 3D sensorimotor landscape:
 - The adapted model is cyan/green and changes only after a genuine model fit.
 - Prediction-to-observation residuals are shown from recorded measurements.
 
-Also include a learned motor-influence graph, camera overlays for actual/frozen/
+It also includes a learned motor-influence graph, camera overlays for actual/frozen/
 adapted motion, a deterministic cognition rail, change score, experiment and
 validation progress, model-generation history, and a mutation-to-detection-to-
 recovery timeline. Human-language narration must be generated from structured
 runtime facts so a future LLM can rephrase it without inventing state.
 
-Keep the primary Drive screen minimal and dramatic. Put raw evidence and detailed
+Keep the primary Drive screen minimal and dramatic. Raw evidence and detailed
 metrics in a Lab overlay/view that does not reload or interrupt the runtime.
-Preserve the independent live mutation buttons and add a projector-friendly
-presenter mode. Use a locally bundled or dependency-free renderer; no cloud
-service or CDN is allowed. Provide a 2D fallback when WebGL is unavailable.
+The independent live mutation buttons and projector-friendly presenter mode are
+part of that interface. The renderer is dependency-free Canvas/SVG, so it has no
+WebGL, cloud, or CDN requirement.
 
 The visual direction is a refined scientific instrument, not a generic neon AI
 dashboard: near-black field, warm paper typography, Darwin acid green, measured

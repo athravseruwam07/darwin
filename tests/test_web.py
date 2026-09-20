@@ -36,6 +36,20 @@ def test_dashboard_separates_drive_controls_from_lab_detail():
     assert 'lab-page' in script
 
 
+def test_observatory_is_a_no_reload_truthful_learning_interface():
+    client=TestClient(create_app(Runtime()))
+    html=client.get('/').text
+    script=client.get('/static/app.js').text
+    for contract in ['data-view="drive"','data-view="lab"','model-field','motor-graph',
+                     'cognition-rail','operator-intervention','presenter-toggle','learning-timeline']:
+        assert contract in html
+    assert 'history.pushState' in script
+    assert 'renderModelField' in script
+    assert 'renderMotorGraph' in script
+    assert 'hidden_mapping' not in html+script
+    assert 'neural network' not in (html+script).lower()
+
+
 def test_drive_to_lab_navigation_preserves_control_lease_without_stopping():
     script=TestClient(create_app(Runtime())).get('/static/app.js').text
     assert 'sessionStorage' in script
@@ -51,8 +65,9 @@ def test_dashboard_contains_adaptation_and_route_story():
         assert contract in assets
 
 def test_dashboard_has_live_navigation_mutation_and_runtime_narration():
-    assets=TestClient(create_app(Runtime())).get('/static/app.js').text
-    for contract in ['inject-mutation','Random Mashup','Swap Wheels','Reverse Left','Reverse Right','Reverse Both','Weaken Left','data-mutation','navigationActive','adaptation-narration','adaptation-timeline','aria-live="polite"']:
+    client=TestClient(create_app(Runtime()))
+    assets=client.get('/').text+client.get('/static/app.js').text
+    for contract in ['inject-mutation','random_mashup','swap','reverse_left','reverse_right','reverse_both','weaken_left','data-mutation','navigationActive','adaptation-narration','adaptation-timeline','aria-live="polite"']:
         assert contract in assets
     for runtime_signal in ["state.state==='NAVIGATING'",'model_mismatch','collecting fresh probes','FITTING','evaluation','navigation_result']:
         assert runtime_signal in assets

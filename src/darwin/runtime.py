@@ -662,6 +662,38 @@ class Runtime:
 
     def public_config(self): return self.config.public()
 
+    @staticmethod
+    def _public_model_field(model, grid_size=9):
+        """Render-safe predictions from a learned model, never actuator truth."""
+        if model is None or model.coefficients is None or model.model_id is None:
+            return None
+        levels=np.linspace(-1.,1.,grid_size)
+        actions=np.asarray([(left,right) for right in levels for left in levels])
+        predictions=model.predict(actions)
+        if not np.isfinite(predictions).all():
+            return None
+        return {
+            'model_id':model.model_id,
+            'grid_size':grid_size,
+            'coefficients':model.coefficients.tolist(),
+            'points':[{'left':float(action[0]),'right':float(action[1]),
+                       'v_mps':float(prediction[0]),'omega_radps':float(prediction[1])}
+                      for action,prediction in zip(actions,predictions)],
+        }
+
+    def _public_model_visualization(self):
+        observations=[]
+        for sample,valid in [(sample,True) for sample in self.samples[-100:]]+[(sample,False) for sample in self.rejected[-20:]]:
+            values=(sample.u1,sample.u2,sample.v_mps,sample.omega_radps)
+            if not np.isfinite(values).all():
+                continue
+            observations.append({'left':float(sample.u1),'right':float(sample.u2),
+                                 'v_mps':float(sample.v_mps),'omega_radps':float(sample.omega_radps),
+                                 'valid':valid})
+        return {'current':self._public_model_field(self.model if self.model_ready else None),
+                'frozen':self._public_model_field(self.frozen_model),
+                'observations':observations}
+
     def list_runs(self):
         return [{'run_id':p.name,'path':str(p)} for p in sorted(Path(self.writer.path).parent.iterdir(),reverse=True) if p.is_dir() and (p/'metadata.json').exists()][:100]
 
@@ -680,6 +712,7 @@ class Runtime:
             'calibration':self.calibration.to_dict() if self.calibration else None,'events':self.events[-25:],
             'latest_residual':self.latest_residual,'change_detection':{**self.change_detection,'detected':self.change_detected},
             'body_change_signal':self.body_change_signal,
+            'model_visualization':self._public_model_visualization(),
             'adaptation_complete':self._change_recovered,
             'model_uncertainty':self.model_uncertainty,
             'frozen_predicted_motion':self.frozen_predicted_motion,

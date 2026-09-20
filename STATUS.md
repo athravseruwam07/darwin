@@ -4,10 +4,19 @@
 
 - Repository: `C:\Users\mohsi\Documents\Codex\2026-09-19\startup-prompt-for-a-different-computer\darwin`
 - Windows 11 x64, PowerShell, local Python 3.13 venv.
-- Simulation dashboard: <http://127.0.0.1:8773>
-- Latest full suite after live-mutation integration: **182 passed, 2 platform skips, 0 failures**.
+- Current hardware dashboard: <http://127.0.0.1:8770> (connected and disarmed after the UI restart).
+- Latest full suite after Observatory integration: **203 passed, 2 platform skips, 0 failures**.
 - JavaScript syntax check passes.
-- The authoritative code remains local and unpushed.
+- The source repository uses `main`; verify the local and remote SHA before continuing on another computer.
+
+## Darwin Observatory UI
+
+- Arena and Observatory are client-side views; switching views does not reload the page, replace the persistent operator owner, or interrupt runtime heartbeats.
+- The Drive view combines the live camera, physical footprint, observed path, frozen/adapted prediction ghosts, deterministic cognition loop, operator intervention lane, mutation controls, and permanently gated STOP.
+- Observatory renders a real 9 x 9 sensorimotor command surface from the fitted ridge model, recorded camera observations, a learned motor-influence graph, held-out metrics, and a causal adaptation timeline.
+- The visualization contract exposes only learned coefficients, learned predictions, and recorded transitions. It contains no simulator map or actuator mutation identity.
+- Projector presenter mode, responsive layout, reduced-motion support, an honest empty-model state, and forward/yaw surface toggles are implemented.
+- Browser QA verified the live OAK camera view, no-reload Arena/Observatory switch, populated 81-point simulation surface, motor graph, yaw toggle, and zero console errors on the populated view.
 
 ## New adaptation demo
 
