@@ -27,8 +27,21 @@ def test_full_camera_runtime_rest_workflow(tmp_path):
         assert client.get('/api/status').json()['pose']['valid']
         learned=operation('start-calibration');assert learned['valid_sample_count']==24
         assert learned['model_id']
+        field=learned['model_visualization']
+        assert field['current']['model_id']==learned['model_id']
+        assert field['current']['grid_size']==9
+        assert len(field['current']['points'])==81
+        assert len(field['current']['coefficients'])==3
+        assert all(math.isfinite(value) for point in field['current']['points'] for value in point.values() if isinstance(value,float))
+        assert 'hidden' not in str(field).lower() and 'mapping' not in str(field).lower()
         assert client.post('/api/target',json={'x_m':.64,'y_m':.64}).status_code==200
         navigated=operation('navigate');assert navigated['state']=='GOAL'
+        comparison=navigated['latest_prediction_comparison']
+        assert set(comparison)=={'command','expected','observed'}
+        assert set(comparison['command'])=={'left','right'}
+        assert set(comparison['expected'])==set(comparison['observed'])=={'forward_mps','turn_radps'}
+        assert all(math.isfinite(value) for group in comparison.values() for value in group.values())
+        assert 'hidden' not in str(comparison).lower() and 'mapping' not in str(comparison).lower()
         assert client.post('/api/recenter',json={}).status_code==200
         assert client.post('/api/scramble',json={}).status_code==200
         assert client.get('/api/status').json()['model_id'] is None

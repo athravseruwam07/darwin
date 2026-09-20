@@ -89,3 +89,4 @@ def test_brain_panel_is_shipped_with_the_dashboard():
         assert contract in html or contract in script
     assert '/api/brain' in script
     assert 'prefers-reduced-motion' in client.get('/static/style.css').text
+    assert html.index('id="brain-rail"')>html.index('data-screen="lab"')

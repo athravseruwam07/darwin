@@ -4,10 +4,19 @@
 
 - Repository: `C:\Users\mohsi\Documents\Codex\2026-09-19\startup-prompt-for-a-different-computer\darwin`
 - Windows 11 x64, PowerShell, local Python 3.13 venv.
-- Simulation dashboard: <http://127.0.0.1:8773>
-- Latest full suite after live-mutation integration: **182 passed, 2 platform skips, 0 failures**.
+- Current hardware dashboard: <http://127.0.0.1:8770> (connected and disarmed after the UI restart).
+- Latest full suite after Observatory integration: **203 passed, 2 platform skips, 0 failures**.
 - JavaScript syntax check passes.
-- The authoritative code remains local and unpushed.
+- The source repository uses `main`; verify the local and remote SHA before continuing on another computer.
+
+## Darwin Observatory UI
+
+- Arena and Observatory are client-side views; switching views does not reload the page, replace the persistent operator owner, or interrupt runtime heartbeats.
+- The Drive view combines the live camera, physical footprint, observed path, frozen/adapted prediction ghosts, deterministic cognition loop, operator intervention lane, mutation controls, and permanently gated STOP.
+- Observatory renders a real 9 x 9 sensorimotor command surface from the fitted ridge model, recorded camera observations, a learned motor-influence graph, held-out metrics, and a causal adaptation timeline.
+- The visualization contract exposes only learned coefficients, learned predictions, and recorded transitions. It contains no simulator map or actuator mutation identity.
+- Projector presenter mode, responsive layout, reduced-motion support, an honest empty-model state, and forward/yaw surface toggles are implemented.
+- Browser QA verified the live OAK camera view, no-reload Arena/Observatory switch, populated 81-point simulation surface, motor graph, yaw toggle, and zero console errors on the populated view.
 
 ## New adaptation demo
 
@@ -31,7 +40,7 @@ Browser verification also exercised the exact requested flow: normal navigation 
 - `darwin.cognition` turns the public runtime snapshot into a fact packet, detects sensed transitions, and publishes first-person thoughts. `GET /api/brain` serves them; `GET /api/brain/voice/<id>` serves synthesized speech; `POST /api/brain/voice` mutes synthesis.
 - Operator actions are recorded on a separate channel labelled `Darwin cannot see this`, so a pressed mutation button is never shown as a detection.
 - OpenAI rephrasing and ElevenLabs speech are optional, keyed from `.env` or the environment, and degrade to deterministic sentences. A rewrite containing a number the facts do not support is discarded.
-- Verified locally through the HTTP API in simulation: calibrate -> target -> navigate -> inject `reverse both` -> `Something feels off` (1.732 / 0.250) -> `My body changed` (1.735 / 0.250, 3 consecutive) -> `Designing experiments` -> `New body learned` (frozen 1.3744, adapted 0.0017, 99.9% better) -> `Resuming navigation` -> `Target reached` at 0.063 m. Headless Chrome screenshots confirmed the rail renders on Drive and Lab.
+- Verified locally through the HTTP API in simulation: calibrate -> target -> navigate -> inject `reverse both` -> `Something feels off` (1.732 / 0.250) -> `My body changed` (1.735 / 0.250, 3 consecutive) -> `Designing experiments` -> `New body learned` (frozen 1.3744, adapted 0.0017, 99.9% better) -> `Resuming navigation` -> `Target reached` at 0.063 m. Browser verification confirmed the integrated inner-monologue card renders and updates in Observatory while Arena remains camera-and-controls only.
 - The real OpenAI and ElevenLabs endpoints have **not** been called: no keys are present on this computer. The urllib transport, request shape, and auth headers were verified against a local stub of both APIs.
 
 ## Software evidence

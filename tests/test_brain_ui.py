@@ -62,3 +62,13 @@ def test_monologue_respects_reduced_motion_and_keeps_stop_reachable():
     assert 'await' not in script.split('function playThought')[1].split('function pump')[0]
     html=(STATIC/'index.html').read_text(encoding='utf-8')
     assert html.index('data-command="stop"')<html.index('id="brain-rail"')
+
+
+def test_monologue_lives_in_observatory_without_cluttering_arena():
+    html=(STATIC/'index.html').read_text(encoding='utf-8')
+    arena=html.split('<main class="operator-view"',1)[1].split('<main class="lab-view"',1)[0]
+    observatory=html.split('<main class="lab-view"',1)[1]
+    assert 'brain-rail' not in arena
+    assert 'Darwin’s inner monologue' in observatory
+    assert 'brain-stream' in observatory
+    assert 'OpenAI' not in arena and 'ElevenLabs' not in arena

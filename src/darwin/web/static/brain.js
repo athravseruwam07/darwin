@@ -15,8 +15,8 @@ const storage={get(key,fallback){try{const value=localStorage.getItem(key);retur
 let body={},thoughts=[],origin=null,rendered=new Map(),played=new Set(),queue=[],speaking=false,pollBusy=false;
 let voiceOn=storage.get('darwin-brain-voice','off')==='on',open=storage.get('darwin-brain-open','on')==='on';
 const TONE_WORDS={boot:'BOOT',work:'WORKING',focus:'DRIVING',curious:'SUSPICIOUS',alarm:'CHANGE SENSED',resolved:'LEARNED',fault:'HALTED',operator:'OPERATOR'};
-function applyLayout(){rail.dataset.open=open?'true':'false';document.body.classList.toggle('brain-open',open);pick('brain-collapse').setAttribute('aria-expanded',String(open));pick('brain-collapse').title=open?'Collapse the monologue':'Open the monologue';}
-function applyVoiceButton(){const button=pick('brain-mute'),available=typeof body.provider?.voice==='string';button.disabled=!available;button.dataset.on=voiceOn&&available?'true':'false';button.setAttribute('aria-pressed',String(voiceOn&&available));button.title=!available?'Add ELEVENLABS_API_KEY to speak thoughts aloud':voiceOn?'Mute Darwin':'Let Darwin speak';}
+function applyLayout(){rail.dataset.open=open?'true':'false';pick('brain-collapse').setAttribute('aria-expanded',String(open));pick('brain-collapse').textContent=open?'Hide thoughts':'Show thoughts';}
+function applyVoiceButton(){const button=pick('brain-mute'),available=typeof body.provider?.voice==='string';button.disabled=!available;button.dataset.on=voiceOn&&available?'true':'false';button.setAttribute('aria-pressed',String(voiceOn&&available));button.textContent=voiceOn&&available?'Voice on':'Voice';button.title=!available?'Add ELEVENLABS_API_KEY to enable voice':voiceOn?'Mute Darwin':'Let Darwin speak';}
 function card(thought){const li=document.createElement('li');li.className='thought';li.dataset.tone=thought.tone;li.dataset.channel=thought.channel;li.dataset.kind=thought.kind;
 const head=document.createElement('div');head.className='thought-head';
 const tone=document.createElement('span');tone.className='thought-tone';tone.textContent=TONE_WORDS[thought.tone]||'NOTE';
@@ -27,7 +27,7 @@ const text=document.createElement('p');text.className='thought-text';text.textCo
 li.append(head,headline,text);
 if(thought.chips.length){const chips=document.createElement('div');chips.className='thought-chips';for(const[label,value]of thought.chips){const chip=document.createElement('span');const b=document.createElement('b');b.textContent=label;chip.append(b,document.createTextNode(value));chips.append(chip);}li.append(chips);}
 const foot=document.createElement('div');foot.className='thought-foot';
-const source=document.createElement('span');source.className='thought-source';source.dataset.source=thought.source;source.textContent=thought.channel==='operator'?'Darwin cannot see this':thought.source==='model'?'rephrased by LLM':'runtime narration';
+const source=document.createElement('span');source.className='thought-source';source.dataset.source=thought.source;source.textContent=thought.channel==='operator'?'Darwin cannot see this':thought.source==='model'?'AI phrasing · grounded facts':'Grounded in runtime facts';
 foot.append(source);
 if(thought.channel==='darwin'){const speak=document.createElement('button');speak.className='thought-speak';speak.type='button';speak.textContent='▶';speak.title='Replay this thought';speak.hidden=thought.voice!=='ready';speak.onclick=()=>playThought(thought.thought_id,true);foot.append(speak);}
 li.append(foot);
@@ -36,7 +36,7 @@ function reveal(node,text){if(reduceMotion?.matches){node.textContent=text;retur
 function render(){const atBottom=stream.scrollHeight-stream.scrollTop-stream.clientHeight<80;const live=new Set();
 for(const thought of thoughts){live.add(thought.thought_id);const existing=rendered.get(thought.thought_id);
 if(!existing){const node=card(thought);rendered.set(thought.thought_id,{node,text:thought.text,voice:thought.voice});stream.append(node);if(thought.channel==='darwin')reveal(node.querySelector('.thought-text'),thought.text);continue;}
-if(existing.text!==thought.text){existing.text=thought.text;const node=existing.node.querySelector('.thought-text');reveal(node,thought.text);existing.node.querySelector('.thought-source').dataset.source=thought.source;existing.node.querySelector('.thought-source').textContent=thought.source==='model'?'rephrased by LLM':'runtime narration';}
+if(existing.text!==thought.text){existing.text=thought.text;const node=existing.node.querySelector('.thought-text');reveal(node,thought.text);existing.node.querySelector('.thought-source').dataset.source=thought.source;existing.node.querySelector('.thought-source').textContent=thought.source==='model'?'AI phrasing · grounded facts':'Grounded in runtime facts';}
 if(existing.voice!==thought.voice){existing.voice=thought.voice;const speak=existing.node.querySelector('.thought-speak');if(speak)speak.hidden=thought.voice!=='ready';}}
 for(const[id,entry]of rendered)if(!live.has(id)){entry.node.remove();rendered.delete(id);}
 pick('brain-empty').hidden=thoughts.length>0;

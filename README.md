@@ -37,7 +37,7 @@ Demo flow:
 5. Darwin notices repeated camera-measured prediction mismatch, stops goal-directed motion, actively selects recovery experiments, validates the adapted model against the frozen model, and resumes toward the original target. The live reasoning panel narrates those recorded states and events.
 6. **Full Adaptation Challenge** remains as a one-button convenience flow. **Draw Route** accepts two or more waypoints.
 
-The dashboard shows mismatch score, action-space uncertainty, frozen/adapted motion ghosts, measured held-out errors, obstacle overlays, route, state machine, and immutable event trail. These are runtime values—not scripted animation.
+The Arena dashboard shows mismatch score, action-space uncertainty, frozen/adapted motion ghosts, measured held-out errors, obstacle overlays, route, state machine, and immutable event trail. Open **Observatory** without reloading the runtime to inspect the learned 3D command-to-motion surface, camera observations, motor-influence graph, causal adaptation timeline, and before/frozen/adapted evidence. These are runtime values—not scripted animation or simulator truth.
 
 ## Inner monologue panel
 
@@ -62,7 +62,7 @@ notepad .env        # OPENAI_API_KEY=... and ELEVENLABS_API_KEY=...
 
 `.env` is git-ignored. Environment variables win over the file. The CLI prints which providers are active at startup, and `--no-brain` / `--no-voice` turn the panel or the speech off for a run.
 
-Only the fact packet is sent to OpenAI. A rewrite is rejected and the deterministic sentence is kept if it contains any number the facts do not support, so the panel cannot invent a measurement. Speech is synthesised per thought and served from `/api/brain/voice/<thought_id>`; press **VOICE** in the rail to unmute (browsers require that gesture before audio can autoplay). Muting also tells the server to stop synthesising.
+Only the fact packet is sent to OpenAI. A rewrite is rejected and the deterministic sentence is kept if it contains any number the facts do not support, so the panel cannot invent a measurement. Speech is synthesised per thought and served from `/api/brain/voice/<thought_id>`; press **Voice** in the Observatory's **Darwin's inner monologue** card to unmute (browsers require that gesture before audio can autoplay). Muting also tells the server to stop synthesising. Arena stays camera-and-controls only.
 
 Narration runs on its own worker thread. It never holds a runtime lock, never commands a motor, and cannot delay STOP.
 

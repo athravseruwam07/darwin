@@ -31,15 +31,14 @@ truth.
 
 - Git remote: `https://github.com/athravseruwam07/darwin.git`
 - Default branch: `main`
-- Latest pushed baseline before the major UI redesign: `01a792a`
+- Agent context was introduced in `1695e86`; always inspect local and remote `main` for newer work.
 - Verified on Windows 11 x64 with PowerShell and the repository-local `venv`.
-- Latest complete test run: **230 passed, 0 failures** (macOS, Node present so the
-  two browser-contract tests run instead of skipping).
+- Latest complete test run: **202 passed, 2 skipped, 0 failures**.
 - The dashboard normally uses <http://127.0.0.1:8770/>. Verify the listener and
   `/api/status` instead of assuming it is running.
-- Generated reports, local camera calibrations, `configs/*.local.yaml`, `.env`,
-  API keys, serial device names, logs, exports, caches, and virtual environments
-  are not portable source and must not be committed.
+- Generated reports, local camera calibrations, `configs/*.local.yaml`, serial
+  device names, logs, exports, caches, and virtual environments are not portable
+  source and must not be committed.
 
 There may be modified tracked files under `reports/` from local verification.
 They are generated evidence, not permission to overwrite, discard, or publish
@@ -92,41 +91,40 @@ the firmware watchdog must remain fail-closed.
 - Replay must be unmistakably labeled and read-only. Never present recorded data
   as live hardware.
 
-## Major UI redesign now requested
+## Darwin Observatory UI
 
-Build a projector-grade **Darwin Observatory** that makes the real
-learn -> navigate -> mutate -> detect -> experiment -> relearn -> validate ->
-resume loop understandable within seconds.
+The **Arena** is intentionally only the live camera, simple current status, and
+the actions needed for the demo: calibrate, choose a target, navigate, alter the
+body mid-run, and stop. Do not put model IDs, raw coordinates, connection labels,
+or learning diagrams on this screen.
 
-The distinctive centerpiece should be a truthful 3D sensorimotor landscape:
+The **Observatory** explains genuine runtime evidence in judge-friendly language:
 
-- X: left-wheel command.
-- Y: right-wheel command.
-- Z: predicted forward speed or yaw rate.
-- Recorded observations are points; rejected samples are visibly distinct.
-- The pre-change frozen model is an amber wireframe.
-- The adapted model is cyan/green and changes only after a genuine model fit.
-- Prediction-to-observation residuals are shown from recorded measurements.
+- What Darwin expected versus what the camera observed on the latest pulse.
+- Whether repeated disagreement is normal, suspicious, or a detected change.
+- The active Watch -> Notice -> Experiment -> Prove stage.
+- A plain-English interpretation of each learned wheel-control coefficient.
+- Before/after prediction-error improvement on held-out movements.
+- A short causal event story from mutation through validation and recovery.
 
-An inner-monologue rail is already implemented in `darwin.cognition` plus
-`web/static/brain.js`. It narrates sensed transitions in Darwin's first person and
-records operator actions on a separate, visually distinct channel. OpenAI rephrasing
-and ElevenLabs speech are optional enrichments keyed from `.env`/environment only;
-without keys the deterministic sentences stand. A rewrite containing a number the
-fact packet does not support is discarded. Extend that module rather than adding a
-second narration path.
+Raw model IDs, coordinates, RMSE tables, the 3D sensorimotor surface, fitted
+coefficient graph, immutable events, and diagnostics live in a collapsed
+**Technical proof** section. They remain available to technical judges without
+competing with the story. All narration must be derived from structured runtime
+facts so a future LLM may rephrase it without inventing state.
 
-Also include a learned motor-influence graph, camera overlays for actual/frozen/
-adapted motion, a deterministic cognition rail, change score, experiment and
-validation progress, model-generation history, and a mutation-to-detection-to-
-recovery timeline. Human-language narration must be generated from structured
-runtime facts so a future LLM can rephrase it without inventing state.
+Switching Arena and Observatory is client-side and must never interrupt the
+runtime or control lease. The renderer remains dependency-free Canvas/SVG, with
+no WebGL, cloud, or CDN requirement.
 
-Keep the primary Drive screen minimal and dramatic. Put raw evidence and detailed
-metrics in a Lab overlay/view that does not reload or interrupt the runtime.
-Preserve the independent live mutation buttons and add a projector-friendly
-presenter mode. Use a locally bundled or dependency-free renderer; no cloud
-service or CDN is allowed. Provide a 2D fallback when WebGL is unavailable.
+The Observatory's **Darwin's inner monologue** card is implemented by
+`darwin.cognition` and `web/static/brain.js`. It turns allow-listed public runtime
+facts into deterministic thoughts, while operator mutations stay in a separate
+"Darwin cannot see this" channel. Optional OpenAI rephrasing and ElevenLabs voice
+use `.env` or environment variables only and must fail back to the deterministic
+sentence without affecting robot control. Keep this card in Observatory; Arena
+must remain camera and controls only. Extend this path instead of adding another
+narration system.
 
 The visual direction is a refined scientific instrument, not a generic neon AI
 dashboard: near-black field, warm paper typography, Darwin acid green, measured
@@ -167,7 +165,6 @@ py -3.13 -m venv venv
 # Test
 .\venv\Scripts\python.exe -m pytest -q
 node --check src\darwin\web\static\app.js
-node --check src\darwin\web\static\brain.js
 
 # Simulation
 .\venv\Scripts\python.exe -m darwin.cli demo --mode simulation --config configs\simulation.yaml --ui-port 8770

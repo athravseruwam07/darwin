@@ -30,10 +30,41 @@ def test_dashboard_separates_drive_controls_from_lab_detail():
     client=TestClient(create_app(Runtime()))
     html=client.get('/').text
     script=client.get('/static/app.js').text
-    for contract in ['operator-view','command-deck','mutation-toolbar','lab-view','href="/"','href="/lab"']:
+    for contract in ['operator-view','command-deck','mutation-buttons','lab-view','href="/"','href="/lab"']:
         assert contract in html
     assert "location.pathname==='/lab'" in script
     assert 'lab-page' in script
+
+
+def test_observatory_is_a_no_reload_truthful_learning_interface():
+    client=TestClient(create_app(Runtime()))
+    html=client.get('/').text
+    script=client.get('/static/app.js').text
+    for contract in ['data-view="drive"','data-view="lab"','learning-story','prediction-card',
+                     'surprise-card','control-learning','result-card','technical-proof']:
+        assert contract in html
+    assert 'history.pushState' in script
+    assert 'renderModelField' in script
+    assert 'renderMotorGraph' in script
+    assert 'hidden_mapping' not in html+script
+    assert 'neural network' not in (html+script).lower()
+
+
+def test_arena_is_only_camera_and_operator_actions():
+    html=TestClient(create_app(Runtime())).get('/').text
+    arena=html.split('<main class="operator-view"',1)[1].split('<main class="lab-view"',1)[0]
+    for useful_control in ['Calibrate movement','Choose target','Navigate','Alter the body','Stop robot']:
+        assert useful_control.lower() in arena.lower()
+    for fluff in ['LOCAL RUNTIME','MODEL GENERATION','LEARNED INFLUENCE','MOTOR GRAPH','POSE','hardware overhead camera']:
+        assert fluff.lower() not in arena.lower()
+
+
+def test_observatory_explains_learning_before_showing_math():
+    html=TestClient(create_app(Runtime())).get('/lab').text
+    for phrase in ['What Darwin expected','What the camera saw','Did reality surprise it?',
+                   'What Darwin learned about its controls','What changed after relearning']:
+        assert phrase in html
+    assert html.index('What Darwin expected') < html.index('technical-proof')
 
 
 def test_drive_to_lab_navigation_preserves_control_lease_without_stopping():
@@ -45,14 +76,15 @@ def test_drive_to_lab_navigation_preserves_control_lease_without_stopping():
 def test_dashboard_contains_adaptation_and_route_story():
     client=TestClient(create_app(Runtime()))
     assets=client.get('/').text+client.get('/static/app.js').text
-    for identifier in ['adaptation-story','mutation-buttons','draw-route','change-score','model-uncertainty']:
+    for identifier in ['learning-story','mutation-buttons','draw-route','change-score','model-uncertainty']:
         assert identifier in assets
     for contract in ['change_detection','adaptation_complete','model_uncertainty','frozen_predicted_motion','adapted_predicted_motion',"act('route',{points:","act('navigate-route')","reverse_left","reverse_right","reverse_both","swap","random_mashup"]:
         assert contract in assets
 
 def test_dashboard_has_live_navigation_mutation_and_runtime_narration():
-    assets=TestClient(create_app(Runtime())).get('/static/app.js').text
-    for contract in ['inject-mutation','Random Mashup','Swap Wheels','Reverse Left','Reverse Right','Reverse Both','Weaken Left','data-mutation','navigationActive','adaptation-narration','adaptation-timeline','aria-live="polite"']:
+    client=TestClient(create_app(Runtime()))
+    assets=client.get('/').text+client.get('/static/app.js').text
+    for contract in ['inject-mutation','random_mashup','swap','reverse_left','reverse_right','reverse_both','weaken_left','data-mutation','navigationActive','adaptation-narration','adaptation-timeline','aria-live="polite"']:
         assert contract in assets
     for runtime_signal in ["state.state==='NAVIGATING'",'model_mismatch','collecting fresh probes','FITTING','evaluation','navigation_result']:
         assert runtime_signal in assets
