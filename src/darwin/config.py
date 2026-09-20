@@ -108,7 +108,12 @@ class Config:
 
     @property
     def config_id(self):
-        return hashlib.sha256(json.dumps(asdict(self), sort_keys=True).encode()).hexdigest()[:12]
+        motion_config = {
+            key: value
+            for key, value in asdict(self).items()
+            if not key.startswith('brain_')
+        }
+        return hashlib.sha256(json.dumps(motion_config, sort_keys=True).encode()).hexdigest()[:12]
 
     @property
     def safe_bounds(self):
