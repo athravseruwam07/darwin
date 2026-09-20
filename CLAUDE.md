@@ -98,6 +98,11 @@ the actions needed for the demo: calibrate, choose a target, navigate, alter the
 body mid-run, and stop. Do not put model IDs, raw coordinates, connection labels,
 or learning diagrams on this screen.
 
+An actual runtime `FAULT` must render as **STOPPED**, never **READY**, even when
+the learned model remains valid. A tracking dropout is a real safety stop; once
+tracking is healthy, an operator stop may disarm the fault without deleting the
+validated model.
+
 The **Observatory** explains genuine runtime evidence in judge-friendly language:
 
 - What Darwin expected versus what the camera observed on the latest pulse.

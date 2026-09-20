@@ -31,6 +31,8 @@ assert.strictEqual(cognition.key,'detected');
 assert.strictEqual(cognition.stage,1);
 assert.strictEqual(cognitionState({state:'RECOVERING',recovery_phase:'collecting fresh probes'}).stage,2);
 assert.strictEqual(cognitionState({adaptation_complete:true}).stage,3);
+assert.deepStrictEqual(arenaStatus({state:'FAULT',stop_reason:'tracking invalid',recovery_phase:'adapted model validated',model_id:'m1'}),['STOPPED','Tracking interrupted','tracking invalid']);
+assert.deepStrictEqual(arenaStatus({state:'DISARMED',model_id:'m1'}),['READY','Ready to drive','Choose a target to begin.']);
 assert.strictEqual(explainControl([.04,-.6]),'drives forward and turns right');
 assert.strictEqual(explainControl([-.04,.6]),'drives backward and turns left');
 assert.strictEqual(explainControl([0,0]),'has almost no effect');
