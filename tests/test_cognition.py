@@ -4,7 +4,7 @@ import math
 import pytest
 from darwin.cognition.facts import cognition_facts
 from darwin.cognition.triggers import detect_triggers, operator_trigger
-from darwin.cognition.providers import OpenAIThoughtWriter, ElevenLabsVoice, supported_numbers, load_env_file
+from darwin.cognition.providers import OpenAIThoughtWriter, ElevenLabsVoice, supported_numbers, load_env_file, clean
 from darwin.cognition.brain import Brain
 
 BASE={'mode':'simulation','state':'READY','busy':False,'recovery_phase':'model validated','stop_reason':None,
@@ -96,6 +96,12 @@ def test_openai_writer_posts_facts_and_degrades_to_fallback():
     assert 'DISARMED' in json.dumps(body['messages'])
     def failing(*args,**kwargs): raise OSError('offline')
     assert OpenAIThoughtWriter('sk-test',transport=failing).write(trigger,{},[]) is None
+
+
+def test_monologue_is_always_one_sentence():
+    assert clean('I noticed a change. I will test it now.')=='I noticed a change.'
+    assert clean('One concise thought without punctuation')=='One concise thought without punctuation'
+    assert len(clean('x'*300))==160
 
 
 def test_elevenlabs_voice_requests_mp3_bytes():

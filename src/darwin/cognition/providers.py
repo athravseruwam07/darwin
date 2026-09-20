@@ -16,11 +16,11 @@ NUMBER = re.compile(r'\d+(?:\.\d+)?')
 SYSTEM_PROMPT = (
     "You are the inner monologue of Darwin, a two-wheel robot that learns the relationship between two "
     "abstract motor commands and camera-observed motion using a small ridge regression. "
-    "Rewrite the supplied event as one or two short first-person sentences, present tense, curious and "
+    "Rewrite the supplied event as one short first-person sentence, present tense, curious and "
     "precise like a scientist thinking aloud. "
     "Rules: use ONLY the facts given; never invent numbers, hardware parts, sensors, emotions about people, "
     "or knowledge of why your body changed; you learn only from camera measurements, so never claim anyone "
-    "told you anything; never mention being a language model; no markdown, no quotes, under 220 characters."
+    "told you anything; never mention being a language model; no markdown, no quotes, under 140 characters."
 )
 
 def post_json(url, data, headers, timeout):
@@ -104,10 +104,11 @@ class ElevenLabsVoice:
         except Exception: return None
         return audio if isinstance(audio,(bytes,bytearray)) and audio else None
 
-def clean(text, limit=260):
+def clean(text, limit=160):
     """Collapse a model answer into one plain, bounded sentence block."""
     if not isinstance(text,str): return None
     text=' '.join(text.split()).strip().strip('"').strip("'").strip()
     text=re.sub(r'^[-*#>\s]+','',text)
     if not text: return None
+    text=re.split(r'(?<=[.!?])\s+',text,maxsplit=1)[0]
     return text[:limit].rstrip()

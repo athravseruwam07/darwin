@@ -87,7 +87,7 @@ def test_brain_panel_is_shipped_with_the_dashboard():
     client=TestClient(create_app(Runtime()))
     html=client.get('/').text
     script=client.get('/static/brain.js').text
-    for contract in ['brain-rail','brain-stream','brain-mute','/static/brain.js']:
+    for contract in ['brain-rail','brain-thought','brain-mute','/static/brain.js']:
         assert contract in html or contract in script
     assert '/api/brain' in script
     assert 'prefers-reduced-motion' in client.get('/static/style.css').text

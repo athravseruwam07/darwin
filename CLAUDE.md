@@ -133,6 +133,12 @@ narration system. The default ElevenLabs voice must work on free API accounts;
 if cloud speech fails, the dashboard may use local browser speech so narration
 remains audible without exposing credentials.
 
+The visible monologue is intentionally one thought at a time: one sentence,
+160 characters maximum, with no tone labels, headlines, chips, source badges,
+timestamps, provider names, or operator entries. While enrichment is pending,
+the gray sentence uses a restrained white text glint and gradual reveal; honor
+`prefers-reduced-motion`.
+
 The visual direction is a refined scientific instrument, not a generic neon AI
 dashboard: near-black field, warm paper typography, Darwin acid green, measured
 cyan, and stale-model amber. Animation must encode real state changes, respect

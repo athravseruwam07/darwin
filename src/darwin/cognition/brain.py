@@ -14,7 +14,7 @@ import uuid
 
 from .facts import cognition_facts
 from .triggers import detect_triggers, operator_trigger
-from .providers import OpenAIThoughtWriter, ElevenLabsVoice, supported_numbers, load_env_file
+from .providers import OpenAIThoughtWriter, ElevenLabsVoice, supported_numbers, load_env_file, clean
 
 MAX_AUDIO_BYTES = 4_000_000
 
@@ -96,8 +96,9 @@ class Brain:
                 last=self._last_at.get(trigger.kind)
                 if last is not None and now-last<self.min_interval_s: return None
             self._last_at[trigger.kind]=now
+            sentence=clean(trigger.fallback) or 'Waiting for new evidence.'
             thought=Thought(uuid.uuid4().hex[:12],now,trigger.kind,trigger.tone,trigger.channel,
-                            trigger.headline,trigger.fallback,trigger.fallback,chips=trigger.chips,facts=facts)
+                            trigger.headline,sentence,sentence,chips=trigger.chips,facts=facts)
             self._thoughts.append(thought)
             dropped,self._thoughts=self._thoughts[:-self.max_thoughts],self._thoughts[-self.max_thoughts:]
             for stale in dropped: self._audio.pop(stale.thought_id,None)

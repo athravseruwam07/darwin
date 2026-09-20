@@ -30,6 +30,7 @@ assert.deepStrictEqual(parsed[0].chips,[['score','0.412'],['evidence','4']]);
 assert.strictEqual(parsed[1].channel,'operator');
 assert.strictEqual(parsed[1].voice,'off');
 assert.strictEqual(parsed[1].source,'local');
+assert.strictEqual(latestThought(parsed).thought_id,'a');
 assert.deepStrictEqual(brainStatus({enabled:false},false),{label:'Offline',mode:'offline'});
 assert.deepStrictEqual(brainStatus({enabled:true,thinking:true},false),{label:'Thinking',mode:'thinking'});
 assert.deepStrictEqual(brainStatus({enabled:true,thinking:true},true),{label:'Speaking',mode:'speaking'});
@@ -71,5 +72,9 @@ def test_monologue_lives_in_observatory_without_cluttering_arena():
     observatory=html.split('<main class="lab-view"',1)[1]
     assert 'brain-rail' not in arena
     assert 'Darwin’s inner monologue' in observatory
-    assert 'brain-stream' in observatory
+    assert 'brain-thought' in observatory
+    assert 'brain-stream' not in observatory
     assert 'OpenAI' not in arena and 'ElevenLabs' not in arena
+    script=(STATIC/'brain.js').read_text(encoding='utf-8')
+    for removed_fluff in ('thought-tone','thought-headline','thought-chips','thought-source'):
+        assert removed_fluff not in script
