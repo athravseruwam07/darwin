@@ -1,12 +1,104 @@
 # Darwin
 
-Darwin is a two-wheel robot that learns the relationship between two abstract motor commands and camera-measured body motion. The same learner and controller run in simulation and on the Arduino robot. After a hidden actuator mutation—including swapping wheels or reversing either or both wheel directions—it detects persistent model mismatch, gathers a small active recovery dataset, refits, validates, and navigates again.
+**A two-wheel robot that learns how its own body moves—and relearns when that body changes.**
 
-The learner never receives the hidden map, wheel truth, or simulator state. Everything is local, CPU-only, and cloud-free.
+Darwin receives two abstract motor commands, watches the result through an overhead camera, and learns the relationship between command and motion from scratch. If its wheels are later swapped, reversed, or weakened, Darwin is not told what changed. It notices that its predictions no longer match what the camera sees, stops, chooses new experiments, refits its model, validates the replacement, and continues toward the original target.
 
-## Windows setup
+Everything in the control loop runs locally on CPU. The learner never receives the hidden actuator map, wheel truth, or simulator state.
 
-Verified on Windows 11 x64 with PowerShell and Python 3.13:
+![Darwin dashboard](reports/ui_final.png)
+
+## Why Darwin exists
+
+Most robots depend on a fixed calibration supplied by a human. That calibration quietly becomes wrong when wiring changes, a motor weakens, or the robot is rebuilt. Darwin treats its own model as a hypothesis that must keep agreeing with observation.
+
+The overhead camera gives the robot a third-person view of itself:
+
+```text
+requested motor command
+          │
+          ▼
+   predicted motion ─────┐
+                         ├── prediction error ──► detect change
+   camera observation ───┘                         │
+                                                  ▼
+                                    design experiments, relearn,
+                                    validate, and resume navigation
+```
+
+This is a closed self-supervised learning loop: the camera supplies labels, held-out trials decide whether a model is usable, and persistent prediction error decides when learning must begin again.
+
+## What it does
+
+1. **Explore:** execute 24 bounded motor pulses selected to cover the two-command action space.
+2. **Observe:** track an ArUco marker and convert camera pixels into position and heading.
+3. **Learn:** fit an affine ridge model from `[left command, right command, bias]` to `[forward velocity, yaw rate]`.
+4. **Validate:** score the model on 12 independent held-out pulses. Training and held-out action IDs are required to be disjoint.
+5. **Navigate:** search candidate commands with the learned model while enforcing arena, footprint, obstacle, time, and action limits.
+6. **Detect drift:** compare predicted motion with measured motion. A single noisy pulse cannot trigger recovery; the error must persist.
+7. **Recover:** freeze the stale model, choose informative new experiments, fit an adapted model, compare both models on the same fresh held-out set, and resume the interrupted route.
+
+The dashboard exposes the real runtime state: camera observations, requested commands, model error, uncertainty, frozen and adapted predictions, safety state, route, and append-only event history. Simulation is always labelled as simulation.
+
+## Results
+
+Darwin has been exercised in simulation and on the physical Arduino/OAK-camera stack.
+
+| Evidence | Result |
+|---|---:|
+| Multi-seed simulation benchmark | 45 mutation cases, no workflow errors |
+| Navigation before mutation | 180 / 180 targets |
+| Navigation with stale model | 5 / 180 targets |
+| Navigation after relearning | 180 / 180 targets |
+| Prediction-error reduction after adaptation | 89.95% minimum, 97.73% mean |
+| Rendered-camera demo | 4/4 before, 0/4 stale, 4/4 adapted |
+| Synthetic vision | 150/150 frames; 0.946 mm position RMSE |
+| Physical learned navigation | target reached in 10 actions, final error 5.71 cm |
+
+The physical run also recorded 177 actions and 175 camera-measured transitions. Physical operation remains supervised: camera disconnect behavior, stopping distance, battery behavior, and every new mechanical arrangement must be checked before a moving run.
+
+See [STATUS.md](STATUS.md) for the current hardware state and [reports/EVIDENCE.md](reports/EVIDENCE.md) for the original hardware-independent acceptance evidence.
+
+## Architecture
+
+![Darwin infrastructure](docs/diagrams/darwin-infrastructure.svg)
+
+The same runtime, model, controller, safety state machine, recorder, replay engine, and dashboard run in simulation and hardware. Only two adapters change:
+
+| Layer | Simulation | Hardware |
+|---|---|---|
+| Observation | Generated camera frame through the real ArUco tracker | OAK camera, webcam, or recorded video |
+| Actuation | Hidden-map differential-drive plant | USB serial to Arduino Uno firmware |
+
+Core components:
+
+- **Vision:** calibrated homography, ArUco pose tracking, stale-frame detection, optional camera-derived obstacles.
+- **Learning:** small interpretable ridge model, rank checks, held-out gates, change detection, active experiment selection, versioned JSON checkpoints.
+- **Control:** learned-model candidate search with swept-footprint boundary and obstacle checks.
+- **Safety:** disarmed startup, one-tab operator lease, continuous tracking and transport checks, cancellation, bounded pulses, serial acknowledgements, and an independent firmware watchdog.
+- **Evidence:** immutable JSONL observations, actions, transitions, events, evaluations, exports, and a separate privileged actuator audit.
+- **Interface:** local FastAPI dashboard with Arena and Observatory views; no cloud service is required.
+
+The hidden mapping exists only inside the simulation plant or physical actuator. The learner receives requested actions and camera-measured motion only.
+
+## Run the simulation
+
+Darwin requires Python 3.11 or newer. Do not copy a virtual environment between computers.
+
+### macOS or Linux
+
+```bash
+git clone https://github.com/athravseruwam07/darwin.git
+cd darwin
+python3 -m venv venv
+venv/bin/python -m pip install --upgrade pip
+venv/bin/python -m pip install -r requirements.resolved.txt
+venv/bin/python -m pip install -e '.[dev]'
+venv/bin/python -m darwin.cli doctor
+venv/bin/python -m darwin.cli demo --mode simulation --config configs/simulation.yaml --ui-port 8770
+```
+
+### Windows PowerShell
 
 ```powershell
 git clone https://github.com/athravseruwam07/darwin.git
@@ -16,77 +108,66 @@ py -3.13 -m venv venv
 .\venv\Scripts\python.exe -m pip install -r requirements.resolved.txt
 .\venv\Scripts\python.exe -m pip install -e ".[dev]"
 .\venv\Scripts\python.exe -m darwin.cli doctor
-```
-
-Do not copy a virtual environment between computers.
-
-## Simulation demo
-
-```powershell
 .\venv\Scripts\python.exe -m darwin.cli demo --mode simulation --config configs\simulation.yaml --ui-port 8770
 ```
 
-Open the URL printed by the CLI. If 8770 is occupied, Darwin chooses the next free local port and prints it.
+Open the URL printed by the CLI. Darwin uses `http://127.0.0.1:8770` by default and selects the next free local port if necessary.
 
-Demo flow:
+### Demo walkthrough
 
-1. Press **Start Calibration** to collect independent training and held-out camera observations, fit ridge regression, and show real validation error.
-2. Press **Select Target**, click within the dashed safe box, then press **Navigate**.
-3. Pick reverse left, reverse right, reverse both, swap wheels, weaken left, or **Random mashup**.
-4. Press normal **Navigate**. While the robot is moving, press **Inject Mutation** whenever you want. The request is applied at the next safe boundary between motor pulses.
-5. Darwin notices repeated camera-measured prediction mismatch, stops goal-directed motion, actively selects recovery experiments, validates the adapted model against the frozen model, and resumes toward the original target. The live reasoning panel narrates those recorded states and events.
-6. **Full Adaptation Challenge** remains as a one-button convenience flow. **Draw Route** accepts two or more waypoints.
+1. Press **Start Calibration** and wait for the training and held-out probes to finish.
+2. Press **Select Target**, click inside the dashed safe arena, then press **Navigate**.
+3. Choose a mutation such as reverse left, reverse right, reverse both, swap wheels, weaken left, or a random admissible combination.
+4. During navigation, press **Inject Mutation**. The hidden change is applied at the next safe boundary between motor pulses.
+5. Watch the measured residual cross the detection threshold, the robot stop, collect recovery experiments, validate the adapted model against the frozen model, and resume the original goal.
+6. Open **Observatory** to inspect the learned command-to-motion surface, camera observations, motor-influence graph, held-out errors, and adaptation timeline.
 
-The Arena dashboard shows mismatch score, action-space uncertainty, frozen/adapted motion ghosts, measured held-out errors, obstacle overlays, route, state machine, and immutable event trail. Open **Observatory** without reloading the runtime to inspect the learned 3D command-to-motion surface, camera observations, motor-influence graph, causal adaptation timeline, and before/frozen/adapted evidence. These are runtime values—not scripted animation or simulator truth.
+**Full Adaptation Challenge** runs the same sequence as a one-button demo. **Draw Route** accepts two or more waypoints.
 
-## Inner monologue panel
+## Optional narration
 
-A side rail on both Drive and Lab narrates what Darwin is doing, in Darwin's own voice. Every sentence is produced from a structured fact packet built out of the public runtime snapshot—state, phase, change score and threshold, sample counts, held-out errors, residuals, pose and distance. The learner's private inputs are unchanged: the panel never reads a simulator plant, an actuator mutation map, or any hidden answer.
+Darwin can narrate its measured state in a small first-person panel. The deterministic narration works without external services. OpenAI can optionally rephrase the fact-backed sentence and ElevenLabs can speak it.
 
-Two channels are kept visually separate:
-
-- **Darwin** (serif, tone-coloured) speaks only about things it could sense. A mutation shows up here as `Something feels off` when residuals rise, then `My body changed` once the detector's consecutive-evidence gate is crossed—never because a button was pressed.
-- **Operator** (dashed, sans, marked `Darwin cannot see this`) records what you did, including which mutation you applied.
-
-Each card carries the numbers it is claiming, and a provenance label: `runtime narration` for the deterministic sentence, `rephrased by LLM` when OpenAI rewrote it.
-
-### Optional OpenAI rephrasing and ElevenLabs speech
-
-Both are optional. Without keys the panel still narrates and the runtime is unaffected.
-
-```powershell
-Copy-Item .env.example .env
-notepad .env        # OPENAI_API_KEY=... and ELEVENLABS_API_KEY=...
-.\venv\Scripts\python.exe -m darwin.cli doctor        # narration_keys reports presence, never values
+```dotenv
+# .env
+OPENAI_API_KEY=...
+ELEVENLABS_API_KEY=...
 ```
 
-`.env` is git-ignored. Environment variables win over the file. The CLI prints which providers are active at startup, and `--no-brain` / `--no-voice` turn the panel or the speech off for a run.
+Set `OPENAI_API_KEY` and/or `ELEVENLABS_API_KEY`. `.env` is ignored by Git, environment variables take precedence, and the CLI reports only whether keys are present. `--no-brain` and `--no-voice` disable these features.
 
-Only the fact packet is sent to OpenAI. A rewrite is rejected and the deterministic sentence is kept if it contains any number the facts do not support, so the panel cannot invent a measurement. Speech is synthesised per thought and served from `/api/brain/voice/<thought_id>`; press **Voice** in the Observatory's **Darwin's inner monologue** card to unmute (browsers require that gesture before audio can autoplay). Muting also tells the server to stop synthesising. Arena stays camera-and-controls only.
+Narration is isolated from control: it runs on a separate worker, never holds the runtime lock, and has no path to a motor command. A rewrite is rejected if it introduces a number unsupported by the runtime facts.
 
-Narration runs on its own worker thread. It never holds a runtime lock, never commands a motor, and cannot delay STOP.
+## Hardware
 
-## Hardware run on this computer
+The reference robot uses:
 
-The local measured config is `configs\hardware.local.yaml`. It names COM5, the OAK camera, marker 7, the saved 1 m × 1 m calibration, 90 PWM ceiling, and a provisional 3 cm probe bound. That file is intentionally excluded from the portable ZIP because another computer may use different ports and calibration.
+- Arduino Uno R3
+- TB6612FNG dual motor driver
+- two DC gear motors
+- independent motor battery connected to driver `VM`
+- overhead OAK camera and ArUco marker
+- Mac or Windows computer connected to the Uno over USB
 
-Start with the robot centered, the full taped square clear, the camera fixed, the USB cable restrained, and someone ready to lift the robot:
+The firmware pin map is:
 
-```powershell
-.\venv\Scripts\python.exe -m darwin.cli doctor
-.\venv\Scripts\python.exe -m darwin.cli camera-test --backend oak
-.\venv\Scripts\python.exe -m darwin.cli demo --mode hardware --config configs\hardware.local.yaml --ui-port 8770
-```
+| Arduino | TB6612FNG |
+|---:|---|
+| D4 | AIN1 / AI1 |
+| D7 | AIN2 / AI2 |
+| D5 | PWMA |
+| D8 | BIN1 / BI1 |
+| D9 | BIN2 / BI2 |
+| D6 | PWMB |
+| D10 | STBY |
+| 5V | VCC |
+| GND | shared GND |
 
-Open the printed local URL. The runtime starts disarmed. Press **Connect**, confirm tracking is stable, then deliberately press **Start Calibration**.
+Motor-battery positive goes to `VM`; battery negative, driver ground, and Arduino ground share a common ground. The motors must not be powered from the Arduino 5 V pin.
 
-Do not run the adaptation challenge until a normal calibration and short navigation succeed in the current physical setup. A reversal can immediately make the stale controller turn the wrong way; the supervisor limits pulses and stops on tracking, boundary, lease, serial, and duration faults, but a human lift-stop is still mandatory.
+Read [firmware/REVIEW.md](firmware/REVIEW.md) before connecting hardware. Nothing in this repository automatically flashes the board or starts physical movement.
 
-Live mutation is currently disabled in `configs\hardware.local.yaml`. Leave it disabled until the raised-wheel polarity/STOP checks and the OAK disconnect gate are passed. Simulation enables it by default.
-
-## New computer / hackathon setup
-
-Copy `configs\hardware.example.yaml` to `configs\hardware.local.yaml`, then fill the actual serial port and a newly saved calibration. Never reuse this machine's COM name or camera calibration blindly.
+Create a machine-specific configuration:
 
 ```powershell
 Copy-Item configs\hardware.example.yaml configs\hardware.local.yaml
@@ -95,57 +176,70 @@ Copy-Item configs\hardware.example.yaml configs\hardware.local.yaml
 .\venv\Scripts\python.exe -m darwin.cli calibrate --config configs\hardware.local.yaml --ui-port 8772
 ```
 
-The first motor test performs a handshake and leaves the controller disarmed. Any moving pulse must be coordinated with the wheels raised:
+The first motor test performs a handshake and leaves the controller disarmed. Any moving pulse requires raised wheels and an explicit confirmation flag:
 
 ```powershell
 .\venv\Scripts\python.exe -m darwin.cli motor-test --port COM_ACTUAL --channel A --pwm 30 --pulse-ms 80 --raised-wheel-confirmed
 .\venv\Scripts\python.exe -m darwin.cli motor-test --port COM_ACTUAL --channel B --pwm 30 --pulse-ms 80 --raised-wheel-confirmed
 ```
 
-Confirm both wheel polarities, STOP, host-loss watchdog, reconnect-disarmed behavior, power stability, marker tracking, footprint, camera age/jitter, and stopping clearance before setting `hardware_confirmed: true`.
+Before floor motion, verify wheel polarity, physical STOP, host-loss watchdog, reconnect-disarmed behavior, power stability, camera-loss stopping, marker tracking, footprint, camera age and jitter, PWM dead zone, settling, coast, and stopping clearance. Hardware mode starts disarmed:
+
+```powershell
+.\venv\Scripts\python.exe -m darwin.cli demo --mode hardware --config configs\hardware.local.yaml --ui-port 8770
+```
 
 ## Verification
 
-```powershell
-.\venv\Scripts\python.exe -m pytest -q
-node --check src\darwin\web\static\app.js
-node --check src\darwin\web\static\brain.js
-.\venv\Scripts\python.exe -m darwin.cli vision-test --synthetic --output reports\vision
-.\venv\Scripts\python.exe -m darwin.cli protocol-test --fake
-.\venv\Scripts\python.exe -m darwin.cli simulate --seed 42 --output reports\sim_42
-.\venv\Scripts\python.exe -m darwin.cli benchmark --observation pose --seeds 11,22,33 --variants linear,noisy,nonlinear --output reports\benchmark
+Run the portable software checks:
+
+```bash
+venv/bin/python -m pytest -q
+venv/bin/python -m darwin.cli vision-test --synthetic --output reports/vision
+venv/bin/python -m darwin.cli protocol-test --fake
+venv/bin/python -m darwin.cli simulate --seed 42 --output reports/sim_42
+venv/bin/python -m darwin.cli benchmark --observation pose --seeds 11,22,33 --variants linear,noisy,nonlinear --output reports/benchmark
 ```
 
-The benchmark covers swap, reverse-left, reverse-right, reverse-both, and unequal-gain mutations across every requested seed and plant variant. Failures remain in the denominator. Synthetic vision uses generated pixels and the real ArUco detector; the benchmark uses pose observations for speed.
+On Windows, replace `venv/bin/python` with `.\venv\Scripts\python.exe`. The complete verifier is:
 
-The full Windows verifier is:
-
-```powershell
-.\venv\Scripts\python.exe scripts\verify_without_hardware.py
+```bash
+venv/bin/python scripts/verify_without_hardware.py
 ```
 
-## Architecture and safety
-
-- Camera: OAK, webcam, video, or simulation-generated frames feed the same marker tracker.
-- Model: small ridge regression over `[left command, right command, bias]`; separate held-out evaluation and JSON checkpoints.
-- Change detection: normalized residual threshold with consecutive-evidence gating, so one noisy pulse does not trigger recovery.
-- Live mutations: operator-owned requests are queued and applied only between pulses. STOP or a new episode clears the queue. Random mashups compose two or more seeded, reviewed maps and reject identity-like, nonfinite, rank-deficient, or amplifying results.
-- Recovery: leverage-based experiment selection, bounded pulse count, frozen-versus-adapted validation, and per-run response signatures. Signatures are informational; they do not silently load an old model.
-- Controller: learned-model candidate search with footprint/boundary checks; single-wheel pivots are excluded from normal motion.
-- Obstacles: camera-derived circles/polygons are excluded from candidate swept paths. Keep detection disabled until the physical view is checked for false positives.
-- Safety: local-only server, ownership lease, continuous pose/transport checks, hard action/time limits, cancellation, firmware watchdog, fail-closed logging, and disarmed reconnect.
-- Narration: `darwin.cognition` projects the public snapshot onto a fact packet, detects sensed transitions, and publishes thoughts. Providers are best-effort and degrade to deterministic sentences.
-- Evidence: append-only JSONL records observations, commands, transitions, events, checkpoints, evaluations, exports, and privileged actuator audit separately.
-
-The hidden map lives only inside the simulator plant or hardware actuator. The learner and controller receive requested actions and observed motion only. Automatic recovery is designed for controlled software remaps; it is not a blanket claim that arbitrary mechanical damage can be diagnosed.
+Synthetic vision generates pixels and sends them through the actual ArUco detector. The benchmark uses pose observations for speed, covers five actuator changes across three plant variants, and retains failures in the denominator.
 
 ## Replay and export
 
-```powershell
-.\venv\Scripts\python.exe -m darwin.cli export --run data\runs\RUN_ID --output reports\exports
-.\venv\Scripts\python.exe -m darwin.cli replay --run data\runs\RUN_ID --ui-port 8771
+Every run is recorded for inspection without reopening a camera or serial port:
+
+```bash
+venv/bin/python -m darwin.cli export --run data/runs/RUN_ID --output reports/exports
+venv/bin/python -m darwin.cli replay --run data/runs/RUN_ID --ui-port 8771
 ```
 
-Replay is read-only and does not open a camera, serial port, or actuator. Source bundles exclude virtual environments, caches, credentials, local device paths, and generated run data.
+Replay is read-only and never constructs a live actuator. Checkpoints are non-executable JSON rather than pickle files.
 
-Firmware pinout and protocol review are in `firmware\REVIEW.md`. Nothing auto-flashes the board.
+## Project map
+
+```text
+src/darwin/
+  cognition/     fact-backed optional narration
+  control/       exploration, learned navigation, routes
+  io/            camera, serial, fake firmware, video adapters
+  learning/      model, drift detector, active experiments, memory
+  recording/     append-only logs, export, replay
+  simulation/    hidden-map differential-drive plant
+  vision/        calibration, tracking, obstacle geometry
+  web/           local API and dashboard
+firmware/        Uno firmware, host harness, review notes
+configs/         simulation and safe hardware templates
+tests/           learning, safety, vision, serial, UI, replay
+reports/         measured evidence and benchmark artifacts
+```
+
+## Scope
+
+Darwin demonstrates recovery from controlled actuator remapping and gain changes. It does not claim to diagnose arbitrary mechanical damage, improve its own learning algorithm, or make an LLM part of the motor-control loop. Physical results and simulation results are reported separately.
+
+The infrastructure diagram is also available as an editable [Excalidraw file](docs/diagrams/darwin-infrastructure.excalidraw).
